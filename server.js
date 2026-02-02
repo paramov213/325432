@@ -2,7 +2,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -22,15 +21,14 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('user_status', { username, status: 'online' });
     });
 
-    socket.on('update_profile_broadcast', (userData) => {
-        // Рассылаем всем, чтобы данные обновились в реальном времени
-        socket.broadcast.emit('user_profile_updated', userData);
-    });
-
     socket.on('typing', (data) => {
         if (users[data.to]) {
             io.to(users[data.to]).emit('display_typing', { from: data.from });
         }
+    });
+
+    socket.on('update_profile_broadcast', (userData) => {
+        socket.broadcast.emit('user_profile_updated', userData);
     });
 
     socket.on('private_msg', (data) => {
@@ -49,5 +47,4 @@ io.on('connection', (socket) => {
 
 server.listen(3000, () => {
     console.log('Broke Pro Max: http://localhost:3000');
-    console.log('This is the best code.');
 });
