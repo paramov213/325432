@@ -7,25 +7,22 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-const ROOT = path.resolve(__dirname);
-app.use(express.static(ROOT));
+app.use(express.static(__dirname));
 
 app.get('*', (req, res) => {
-    res.sendFile(path.join(ROOT, 'index.html'));
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-let onlineUsers = {}; // username -> socketId
+let onlineUsers = {};
 
 io.on('connection', (socket) => {
     socket.on('online', (username) => {
         onlineUsers[username] = socket.id;
     });
-
     socket.on('private_msg', (data) => {
         const targetSid = onlineUsers[data.to];
         if (targetSid) io.to(targetSid).emit('receive_msg', data);
     });
-
     socket.on('disconnect', () => {
         for (let user in onlineUsers) {
             if (onlineUsers[user] === socket.id) delete onlineUsers[user];
@@ -34,4 +31,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Broke Pro running on ${PORT}`));
+server.listen(PORT, () => console.log('Broke Server Started'));
