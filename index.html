@@ -2,74 +2,67 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Broke Pro Max</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        :root { --ios-blue: #007AFF; --glass: rgba(255, 255, 255, 0.85); --text: #000; --msg-in: #e5e5ea; }
-        body.dark-mode { --glass: rgba(30, 30, 30, 0.95); --text: #fff; --msg-in: #3a3a3c; background: #000; }
+        :root { --ios-blue: #007AFF; --glass: rgba(255, 255, 255, 0.8); --text: #000; --msg-in: #e5e5ea; --accent: #34c759; }
+        body.dark-mode { --glass: rgba(28, 28, 30, 0.9); --text: #fff; --msg-in: #3a3a3c; background: #000; }
         
-        * { box-sizing: border-box; transition: 0.3s; font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
         
-        body, html { 
-            margin: 0; padding: 0; height: 100%; width: 100%;
-            background: #000 url('https://w.wallhaven.cc/full/ex/wallhaven-ex96pw.png') center/cover no-repeat;
-            color: var(--text); overflow: hidden; position: fixed; 
-        }
+        body, html { margin: 0; height: 100%; width: 100%; background: #000 url('https://w.wallhaven.cc/full/ex/wallhaven-ex96pw.png') center/cover; color: var(--text); overflow: hidden; }
 
-        .app-container { display: flex; width: 100%; height: 100%; position: relative; overflow: hidden; }
+        .app-container { display: flex; width: 100%; height: 100%; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
         
-        .sidebar { 
-            width: 350px; background: var(--glass); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-            border-right: 0.5px solid rgba(125,125,125,0.3); display: flex; flex-direction: column; height: 100%; 
-            position: relative; z-index: 10; flex-shrink: 0;
-        }
-
-        .chat-area { flex: 1; display: flex; flex-direction: column; position: relative; z-index: 5; height: 100%; overflow: hidden; }
-
-        @media (max-width: 768px) {
-            .sidebar { width: 100%; position: absolute; left: 0; }
-            .chat-area { width: 100%; position: absolute; left: 100%; background: var(--glass); backdrop-filter: blur(30px); }
-            .chat-open .sidebar { transform: translateX(-20%); opacity: 0.5; }
-            .chat-open .chat-area { left: 0; z-index: 20; }
-        }
-
-        .back-btn { display: none; background: none; border: none; color: var(--ios-blue); font-size: 24px; cursor: pointer; padding: 0 15px; }
-        @media (max-width: 768px) { .back-btn { display: flex; } }
-
-        .ios-input { background: rgba(125,125,125,0.15); border: none; border-radius: 12px; padding: 12px; width: 100%; color: var(--text); outline: none; font-size: 16px; margin-bottom: 8px; }
-        .btn { background: var(--ios-blue); color: white; border: none; border-radius: 12px; padding: 14px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; }
-        .btn-danger { background: #ff3b30 !important; }
+        /* Sidebar */
+        .sidebar { width: 350px; background: var(--glass); border-right: 0.5px solid rgba(125,125,125,0.2); display: flex; flex-direction: column; z-index: 10; }
         
-        #chat-list { flex: 1; overflow-y: auto; }
-        .list-item { padding: 12px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-radius: 15px; margin: 4px 10px; position: relative; }
+        /* Animations */
+        @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(0, 122, 255, 0); } 100% { transform: scale(1); } }
+        .typing-indicator { font-size: 12px; color: var(--accent); margin-bottom: 5px; font-style: italic; display: none; }
+
+        /* UI Elements */
+        .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--ios-blue); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; background-size: cover; position: relative; }
+        .online-dot { width: 12px; height: 12px; background: var(--accent); border: 2px solid white; border-radius: 50%; position: absolute; bottom: 0; right: 0; }
+        
+        .ios-input { background: rgba(125,125,125,0.1); border: none; border-radius: 12px; padding: 14px; width: 100%; color: var(--text); outline: none; margin-bottom: 10px; }
+        .btn { background: var(--ios-blue); color: white; border: none; border-radius: 12px; padding: 14px; cursor: pointer; font-weight: 600; width: 100%; }
+        
+        /* Chat List */
+        .list-item { padding: 15px; display: flex; align-items: center; gap: 15px; cursor: pointer; margin: 5px 10px; border-radius: 15px; position: relative; }
+        .list-item:hover { background: rgba(125,125,125,0.1); }
         .active-chat { background: var(--ios-blue) !important; color: white !important; }
-        
-        .unread-badge { background: #ff3b30; color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; position: absolute; right: 15px; top: 18px; font-weight: bold; }
 
-        .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 80%; padding: 10px 16px; border-radius: 20px; font-size: 16px; word-wrap: break-word; }
-        .m-in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 4px; }
-        .m-out { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-        
-        .avatar { 
-            width: 48px; height: 48px; border-radius: 50%; background: var(--ios-blue); 
-            display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; 
-            background-size: cover; background-position: center; flex-shrink: 0;
+        .unread-badge { background: #ff3b30; color: white; font-size: 10px; padding: 3px 7px; border-radius: 10px; position: absolute; right: 15px; top: 15px; }
+
+        /* Messages */
+        .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 75%; padding: 12px 16px; border-radius: 20px; font-size: 15px; line-height: 1.4; animation: slideIn 0.2s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .m-in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 5px; }
+        .m-out { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 5px; }
+
+        /* Modals */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .modal-card { background: var(--glass); padding: 30px; border-radius: 30px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+
+        .back-btn { display: none; font-size: 30px; color: var(--ios-blue); background: none; border: none; cursor: pointer; }
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; }
+            .chat-area { display: none; width: 100%; position: absolute; background: var(--glass); z-index: 20; }
+            .chat-open .chat-area { display: flex; }
+            .back-btn { display: block; }
         }
-        
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(15px); }
-        .modal-card { background: var(--glass); padding: 25px; border-radius: 30px; width: 90%; max-width: 340px; text-align: center; }
-        .nft-badge { background: linear-gradient(45deg, gold, orange); color: black; padding: 4px 10px; border-radius: 10px; font-size: 11px; font-weight: bold; margin: 2px; display: inline-block; }
     </style>
 </head>
 <body>
 
-    <div id="auth-screen" style="display: flex; height: 100vh; justify-content: center; align-items: center; backdrop-filter: blur(50px); z-index: 200;">
-        <div class="auth-card" style="background: var(--glass); padding: 40px; border-radius: 35px; width: 90%; max-width: 340px; text-align: center;">
-            <h1>Broke Pro</h1>
-            <p style="opacity:0.5;">This is the best code.</p>
-            <input type="text" id="auth-user" placeholder="Логин" class="ios-input">
+    <div id="auth-screen" style="display: flex; height: 100vh; justify-content: center; align-items: center; z-index: 200; position: relative;">
+        <div class="modal-card">
+            <h1 style="margin:0;">Broke Pro</h1>
+            <p style="opacity:0.5; margin-bottom:20px;">This is the best code.</p>
+            <input type="text" id="auth-user" placeholder="Логин (@...)" class="ios-input">
             <input type="password" id="auth-pass" placeholder="Пароль" class="ios-input">
             <button onclick="login()" class="btn">Войти</button>
         </div>
@@ -77,58 +70,61 @@
 
     <div id="app-screen" class="app-container" style="display:none;">
         <div class="sidebar">
-            <div style="padding:50px 20px 10px;" onclick="openMyProfile()">
-                <div style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+            <div style="padding:50px 20px 20px;" onclick="openMyProfile()">
+                <div style="display:flex; align-items:center; gap:15px; cursor:pointer;">
                     <div id="my-av-ui" class="avatar"></div>
-                    <div style="flex:1;">
+                    <div>
                         <strong id="my-name-ui">Загрузка...</strong><br>
-                        <small id="my-user-ui" style="opacity:0.6;">@username</small>
+                        <small id="my-user-ui" style="opacity:0.5;"></small>
                     </div>
                 </div>
             </div>
-            <div style="padding: 10px 15px;">
-                <input type="text" id="search-inp" placeholder="Поиск @user..." class="ios-input" onkeyup="if(event.key==='Enter') searchStart(this.value)">
-                <button onclick="openModal('modal-channel')" class="btn" style="background:rgba(125,125,125,0.1); color:var(--text); font-size:13px;">➕ Создать канал</button>
+            
+            <div style="padding: 0 15px 15px;">
+                <input type="text" id="search-inp" placeholder="Поиск @юзернейм..." class="ios-input" onkeyup="if(event.key==='Enter') searchStart(this.value)">
             </div>
-            <div id="chat-list"></div>
-            <div style="padding:15px; margin-top: auto;">
-                <button onclick="toggleTheme()" class="btn" style="background:rgba(125,125,125,0.1); color:var(--text); margin-bottom:8px;">🌓 Тема</button>
+
+            <div id="chat-list" style="flex:1; overflow-y:auto;"></div>
+
+            <div style="padding:20px;">
+                <button onclick="toggleTheme()" class="btn" style="background:rgba(125,125,125,0.1); color:var(--text); margin-bottom:10px;">🌓 Сменить тему</button>
                 <button onclick="logout()" class="btn" style="background:none; color:#ff3b30;">🚪 Выйти</button>
-                <button id="adm-btn" onclick="openModal('modal-admin')" class="btn" style="display:none; background:none; opacity:0.5;">🛠 Админ</button>
+                <button id="adm-btn" onclick="openModal('modal-admin')" class="btn" style="display:none; background:none; opacity:0.5; font-size:12px;">🛠 АДМИН</button>
             </div>
         </div>
 
-        <div class="chat-area">
-            <div id="chat-header" style="display:none; padding:10px; background:var(--glass); align-items:center; border-bottom:0.5px solid rgba(125,125,125,0.3); min-height: 60px;">
+        <div class="chat-area" style="flex:1; flex-direction:column; display:none;">
+            <div style="padding:15px; display:flex; align-items:center; border-bottom:0.5px solid rgba(125,125,125,0.2); background: var(--glass);">
                 <button class="back-btn" onclick="closeChat()">‹</button>
-                <div id="header-av" class="avatar" style="width:38px; height:38px; margin-right:12px;" onclick="viewUserProfile(activeID)"></div>
+                <div id="header-av" class="avatar" style="width:40px; height:40px; margin: 0 15px;" onclick="viewUserProfile(activeID)"></div>
                 <div style="flex:1;">
                     <strong id="header-name">Чат</strong><br>
-                    <small id="header-status" style="color:#4cd964; font-size:12px; display:none;">в сети</small>
+                    <small id="typing-ui" class="typing-indicator">печатает...</small>
                 </div>
             </div>
             <div id="msg-box" class="messages"></div>
-            <div id="input-row" style="display:none; padding:12px; background:var(--glass); gap:10px;">
-                <input type="text" id="m-text" class="ios-input" style="flex:1; margin-bottom:0;" placeholder="Сообщение..." onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMsg(); }">
-                <button onclick="sendMsg()" class="btn" style="width:45px; height:45px; border-radius:50%; margin-top:0;">⬆</button>
+            <div style="padding:15px; background: var(--glass); display:flex; gap:10px;">
+                <input type="text" id="m-text" class="ios-input" style="margin-bottom:0;" placeholder="Сообщение..." oninput="emitTyping()" onkeydown="if(event.key==='Enter') sendMsg()">
+                <button onclick="sendMsg()" class="btn" style="width:50px; padding:0;">⬆</button>
             </div>
         </div>
     </div>
 
     <div id="modal-profile" class="modal" onclick="closeModals()">
-        <div id="profile-card" class="modal-card" onclick="event.stopPropagation()">
-            <div id="p-av" class="avatar" style="width:90px; height:90px; margin:0 auto 15px; font-size:32px;"></div>
-            <h2 id="p-name-top"></h2>
-            <p id="p-user-top" style="color:var(--ios-blue);"></p>
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div id="p-av" class="avatar" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
+            <h2 id="p-name-top" style="margin:0;"></h2>
+            <p id="p-user-top" style="color:var(--ios-blue); margin-bottom:20px;"></p>
+            
             <div id="profile-edit-fields">
                 <input type="text" id="ed-name" placeholder="Имя" class="ios-input">
                 <input type="text" id="ed-about" placeholder="О себе" class="ios-input">
                 <input type="text" id="ed-av" placeholder="URL аватара" class="ios-input">
-                <label style="font-size:12px; opacity:0.6;">Цвет свечения:</label>
-                <input type="color" id="ed-color" style="width:100%; height:40px; border:none; border-radius:8px;">
+                <label>Цвет свечения:</label>
+                <input type="color" id="ed-color" style="width:100%; height:40px; border-radius:10px; border:none; margin:10px 0;">
                 <button onclick="saveProfile()" class="btn">Сохранить</button>
             </div>
-            <div id="p-info-static" style="text-align:left; margin-top:10px; border-top:0.5px solid rgba(125,125,125,0.3); padding-top:10px;">
+            <div id="p-info-static" style="text-align:left; border-top:0.5px solid rgba(125,125,125,0.2); padding-top:15px; margin-top:15px;">
                 <p><b>О себе:</b> <span id="p-about-val"></span></p>
                 <div id="p-nfts"></div>
             </div>
@@ -138,18 +134,21 @@
     <div id="modal-admin" class="modal" onclick="closeModals()">
         <div class="modal-card" onclick="event.stopPropagation()">
             <h3>Админ-панель</h3>
-            <button onclick="admAddNFT()" class="btn">💎 Выдать NFT</button>
-            <button onclick="admDeleteAcc()" class="btn btn-danger" style="margin-top:10px;">🗑 Удалить аккаунт</button>
+            <button onclick="admDeleteAcc()" class="btn btn-danger">🗑 Удалить аккаунт</button>
         </div>
     </div>
 
     <script>
         const socket = io();
-        let db = JSON.parse(localStorage.getItem('broke_v10')) || null;
+        let db = JSON.parse(localStorage.getItem('broke_user')) || null;
         let history = JSON.parse(localStorage.getItem('broke_history')) || [];
-        let msgLog = JSON.parse(localStorage.getItem('messages_history')) || []; 
-        let unread = JSON.parse(localStorage.getItem('unread_counts')) || {};
+        let msgLog = JSON.parse(localStorage.getItem('broke_msgs')) || [];
+        let unread = JSON.parse(localStorage.getItem('broke_unread')) || {};
         let activeID = null;
+        let typingTimeout;
+
+        // Звук сообщения
+        const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
 
         window.onload = () => { if(db) startApp(); };
 
@@ -157,10 +156,16 @@
             const user = document.getElementById('auth-user').value.trim();
             const pass = document.getElementById('auth-pass').value.trim();
             if(!user) return;
+
+            // Если заходим под старым логином, восстанавливаем данные
+            let savedProfile = history.find(h => h.username === (user.startsWith('@') ? user : '@'+user));
+            
             if(user === "paramov" && pass === "565811") {
                 db = { username: "@paramov", name: "Admin", isAdmin: true, nfts: ["👑"], about: "This is the best code.", pColor: "#007AFF" };
+            } else if(savedProfile) {
+                db = savedProfile;
             } else {
-                db = db || { username: "@"+user, name: user, isAdmin: false, nfts: [], about: "This is the best code.", pColor: "#ffffff00" };
+                db = { username: user.startsWith('@') ? user : '@'+user, name: user, isAdmin: false, nfts: [], about: "This is the best code.", pColor: "#ffffff00" };
             }
             save(); startApp();
         }
@@ -169,40 +174,39 @@
             document.getElementById('auth-screen').style.display = 'none';
             document.getElementById('app-screen').style.display = 'flex';
             if(db.isAdmin) document.getElementById('adm-btn').style.display = 'block';
+            
             socket.emit('online', db.username);
-            socket.emit('update_profile_broadcast', db); 
+            socket.emit('update_profile_broadcast', db);
             updateUI(); renderList();
         }
 
-        // Синхронизация профилей других людей
         socket.on('user_profile_updated', (updatedUser) => {
             const idx = history.findIndex(h => h.username === updatedUser.username);
             if(idx !== -1) history[idx] = updatedUser;
             else history.push(updatedUser);
             saveHist(); renderList();
-            if(activeID === updatedUser.username) {
-                const hav = document.getElementById('header-av');
-                document.getElementById('header-name').innerText = updatedUser.name;
-                hav.style.backgroundImage = updatedUser.avatar ? `url('${updatedUser.avatar}')` : 'none';
-                hav.innerText = updatedUser.avatar ? '' : updatedUser.name[0];
-            }
         });
 
         socket.on('receive_msg', (d) => {
-            const partner = (d.from === db.username) ? d.to : d.from;
-            // Анти-дубль
-            if(msgLog.some(m => m.text === d.text && m.from === d.from && Math.abs(m.time - Date.now()) < 500)) return;
-            
-            d.time = Date.now();
+            if(msgLog.some(m => m.text === d.text && m.time === d.time)) return;
             msgLog.push(d);
-            localStorage.setItem('messages_history', JSON.stringify(msgLog));
-
-            if(activeID === partner) {
-                appendMsg(d.text, d.from === db.username ? 'm-out' : 'm-in');
-            } else if(d.from !== db.username) {
-                unread[partner] = (unread[partner] || 0) + 1;
-                localStorage.setItem('unread_counts', JSON.stringify(unread));
+            saveMsgs();
+            
+            if(activeID === d.from) {
+                appendMsg(d.text, 'm-in');
+            } else {
+                unread[d.from] = (unread[d.from] || 0) + 1;
+                localStorage.setItem('broke_unread', JSON.stringify(unread));
+                msgSound.play();
                 renderList();
+            }
+        });
+
+        socket.on('display_typing', (data) => {
+            if(activeID === data.from) {
+                document.getElementById('typing-ui').style.display = 'block';
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => { document.getElementById('typing-ui').style.display = 'none'; }, 2000);
             }
         });
 
@@ -212,42 +216,61 @@
             const data = { to: activeID, from: db.username, text: inp.value, time: Date.now() };
             socket.emit('private_msg', data);
             msgLog.push(data);
-            localStorage.setItem('messages_history', JSON.stringify(msgLog));
+            saveMsgs();
             appendMsg(inp.value, 'm-out');
             inp.value = "";
         }
 
-        function appendMsg(t, c) {
-            const d = document.createElement('div'); d.className = 'msg ' + c; d.innerText = t;
-            const box = document.getElementById('msg-box'); box.appendChild(d); box.scrollTop = box.scrollHeight;
+        function emitTyping() {
+            socket.emit('typing', { to: activeID, from: db.username });
+        }
+
+        function renderList() {
+            document.getElementById('chat-list').innerHTML = history.map(h => `
+                <div class="list-item ${activeID === h.username ? 'active-chat' : ''}" onclick="openChat('${h.username}')">
+                    <div class="avatar" style="background-image:url('${h.avatar || ''}')">${h.avatar ? '' : h.name[0]}</div>
+                    <div style="flex:1;">
+                        <b>${h.name}</b><br><small style="opacity:0.6;">${h.username}</small>
+                    </div>
+                    ${unread[h.username] ? `<div class="unread-badge">${unread[h.username]}</div>` : ''}
+                </div>
+            `).join('');
         }
 
         function openChat(id) {
-            activeID = id; unread[id] = 0; localStorage.setItem('unread_counts', JSON.stringify(unread));
-            document.getElementById('app-screen').classList.add('chat-open');
+            activeID = id; unread[id] = 0;
+            localStorage.setItem('broke_unread', JSON.stringify(unread));
             const user = history.find(h => h.username === id) || {name: id, username: id};
-            document.getElementById('chat-header').style.display = 'flex';
-            document.getElementById('input-row').style.display = 'flex';
+            
+            document.querySelector('.chat-area').style.display = 'flex';
+            document.getElementById('app-screen').classList.add('chat-open');
             document.getElementById('header-name').innerText = user.name;
             const hav = document.getElementById('header-av');
             hav.style.backgroundImage = user.avatar ? `url('${user.avatar}')` : 'none';
-            hav.innerText = user.avatar ? '' : (user.name ? user.name[0] : '?');
+            hav.innerText = user.avatar ? '' : user.name[0];
+
             document.getElementById('msg-box').innerHTML = "";
             msgLog.filter(m => (m.from === id && m.to === db.username) || (m.from === db.username && m.to === id))
                   .forEach(m => appendMsg(m.text, m.from === db.username ? 'm-out' : 'm-in'));
             renderList();
         }
 
+        function appendMsg(t, c) {
+            const d = document.createElement('div');
+            d.className = 'msg ' + c; d.innerText = t;
+            const box = document.getElementById('msg-box');
+            box.appendChild(d); box.scrollTop = box.scrollHeight;
+        }
+
         function showProfileData(user) {
-            if(!user) return;
-            document.getElementById('p-name-top').innerText = user.name || user.username;
+            document.getElementById('p-name-top').innerText = user.name;
             document.getElementById('p-user-top').innerText = user.username;
             const pav = document.getElementById('p-av');
             pav.style.backgroundImage = user.avatar ? `url('${user.avatar}')` : 'none';
-            pav.innerText = user.avatar ? '' : (user.name ? user.name[0] : '?');
-            pav.style.boxShadow = user.pColor && user.pColor !== '#ffffff00' ? `0 0 25px ${user.pColor}` : 'none';
+            pav.innerText = user.avatar ? '' : user.name[0];
+            pav.style.boxShadow = `0 0 25px ${user.pColor || '#ffffff00'}`;
+            pav.style.border = `2px solid ${user.pColor || 'transparent'}`;
             document.getElementById('p-about-val').innerText = user.about || "This is the best code.";
-            document.getElementById('p-nfts').innerHTML = (user.nfts || []).map(n => `<span class="nft-badge">💎 ${n}</span>`).join('');
         }
 
         function saveProfile() {
@@ -255,34 +278,20 @@
             db.about = document.getElementById('ed-about').value;
             db.avatar = document.getElementById('ed-av').value;
             db.pColor = document.getElementById('ed-color').value;
-            save(); socket.emit('update_profile_broadcast', db); updateUI(); closeModals();
+            save();
+            socket.emit('update_profile_broadcast', db);
+            updateUI(); closeModals();
         }
 
         function searchStart(val) {
             let t = val.startsWith('@') ? val : '@'+val;
             const found = history.find(h => h.username === t);
-            if(!found) alert("Ничего не найдено!");
-            else openChat(found.username);
-        }
-
-        function admDeleteAcc() {
-            const target = prompt("Юзернейм для удаления (@username):");
-            if(target) {
-                history = history.filter(h => h.username !== target);
-                saveHist(); renderList(); alert("Аккаунт удален.");
-            }
-        }
-
-        function renderList() {
-            document.getElementById('chat-list').innerHTML = history.map(h => `
-                <div class="list-item ${activeID === h.username ? 'active-chat' : ''}" onclick="openChat('${h.username}')">
-                    <div class="avatar" style="background-image:url('${h.avatar || ''}')">${h.avatar ? '' : (h.name ? h.name[0] : '?')}</div>
-                    <div style="flex:1; overflow:hidden;">
-                        <b>${h.name}</b><br><small style="opacity:0.6;">${h.username}</small>
-                    </div>
-                    ${unread[h.username] > 0 ? `<div class="unread-badge">${unread[h.username]}</div>` : ''}
-                </div>
-            `).join('');
+            if(!found) {
+                if(confirm("Ничего не найдено. Начать чат с " + t + "?")) {
+                    const newUser = {username: t, name: t.replace('@',''), avatar:'', about:'', nfts:[], pColor:'#ffffff00'};
+                    history.push(newUser); saveHist(); openChat(t);
+                }
+            } else openChat(t);
         }
 
         function updateUI() {
@@ -291,30 +300,24 @@
             const av = document.getElementById('my-av-ui');
             av.style.backgroundImage = db.avatar ? `url('${db.avatar}')` : 'none';
             av.innerText = db.avatar ? '' : db.name[0];
+            av.style.boxShadow = `0 0 10px ${db.pColor}`;
         }
 
-        function save() { localStorage.setItem('broke_v10', JSON.stringify(db)); }
+        function admDeleteAcc() {
+            const t = prompt("Удалить (@username):");
+            if(t) { history = history.filter(h => h.username !== t); saveHist(); renderList(); alert("Удалено."); }
+        }
+
+        function save() { localStorage.setItem('broke_user', JSON.stringify(db)); }
         function saveHist() { localStorage.setItem('broke_history', JSON.stringify(history)); }
+        function saveMsgs() { localStorage.setItem('broke_msgs', JSON.stringify(msgLog)); }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
-        function closeChat() { document.getElementById('app-screen').classList.remove('chat-open'); activeID = null; }
-        function logout() { localStorage.clear(); location.reload(); }
-        function toggleTheme() { document.body.classList.toggle('dark-mode'); db.isDark = !db.isDark; save(); }
-        function openMyProfile() { 
-            openModal('modal-profile'); document.getElementById('profile-edit-fields').style.display = 'block'; 
-            document.getElementById('ed-name').value = db.name; document.getElementById('ed-about').value = db.about;
-            document.getElementById('ed-av').value = db.avatar || ""; document.getElementById('ed-color').value = db.pColor || "#000000";
-            showProfileData(db); 
-        }
-        function viewUserProfile(id) { 
-            const user = history.find(h => h.username === id);
-            if(!user) return; openModal('modal-profile'); document.getElementById('profile-edit-fields').style.display = 'none'; showProfileData(user); 
-        }
-        function admAddNFT() {
-            const t = prompt("Кому? (@username):"); const n = prompt("Название NFT:");
-            const u = (t === db.username) ? db : history.find(h => h.username === t);
-            if(u) { u.nfts = u.nfts || []; u.nfts.push(n); t === db.username ? save() : saveHist(); socket.emit('update_profile_broadcast', u); alert("NFT выдано!"); }
-        }
+        function closeChat() { document.getElementById('app-screen').classList.remove('chat-open'); }
+        function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+        function logout() { document.getElementById('auth-screen').style.display = 'flex'; document.getElementById('app-screen').style.display = 'none'; }
+        function openMyProfile() { openModal('modal-profile'); document.getElementById('profile-edit-fields').style.display = 'block'; showProfileData(db); }
+        function viewUserProfile(id) { openModal('modal-profile'); document.getElementById('profile-edit-fields').style.display = 'none'; showProfileData(history.find(h => h.username === id)); }
     </script>
 </body>
 </html>
