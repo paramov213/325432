@@ -14,6 +14,7 @@ io.on('connection', (socket) => {
     socket.on('online', (username) => {
         socket.username = username;
         users.set(username, socket.id);
+        console.log(`User ${username} connected`);
     });
 
     socket.on('private_msg', (data) => {
