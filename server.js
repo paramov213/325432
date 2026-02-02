@@ -5,37 +5,25 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: { origin: "*" }
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
-// Указываем путь к статике явно
-const publicPath = path.join(__dirname);
-app.use(express.static(publicPath));
+const ROOT = path.resolve(__dirname);
+app.use(express.static(ROOT));
 
-// Главная страница
-app.get('/', (req, res) => {
-    res.sendFile(path.join(publicPath, 'index.html'));
-});
-
-// ЛОВУШКА ДЛЯ NOT FOUND: если любой другой путь — отдаем index.html
 app.get('*', (req, res) => {
-    res.sendFile(path.join(publicPath, 'index.html'));
+    res.sendFile(path.join(ROOT, 'index.html'));
 });
 
-let onlineUsers = {};
+let onlineUsers = {}; // username -> socketId
 
 io.on('connection', (socket) => {
     socket.on('online', (username) => {
         onlineUsers[username] = socket.id;
-        console.log(`User ${username} connected`);
     });
 
     socket.on('private_msg', (data) => {
         const targetSid = onlineUsers[data.to];
-        if (targetSid) {
-            io.to(targetSid).emit('receive_msg', data);
-        }
+        if (targetSid) io.to(targetSid).emit('receive_msg', data);
     });
 
     socket.on('disconnect', () => {
@@ -46,6 +34,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Broke Messenger server is running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`Broke Pro running on ${PORT}`));
