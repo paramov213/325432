@@ -1,10 +1,15 @@
 const express = require('express');
-const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http, { cors: { origin: "*" } });
+const http = require('http');
 const path = require('path');
+const { Server } = require('socket.io');
 
-// Обслуживание статических файлов
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: "*" }
+});
+
+// Раздача статики
 app.use(express.static(path.join(__dirname)));
 
 // Главная страница
@@ -12,13 +17,17 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Логика чата
+// ИСПРАВЛЕНИЕ NOT FOUND: Если путь не найден, отдаем index.html
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 let onlineUsers = {};
 
 io.on('connection', (socket) => {
     socket.on('online', (username) => {
         onlineUsers[username] = socket.id;
-        console.log(`User ${username} connected`);
+        console.log(`Пользователь ${username} подключен`);
     });
 
     socket.on('private_msg', (data) => {
@@ -36,4 +45,6 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => {
+    console.log(`Сервер Broke запущен на порту ${PORT}`);
+});
