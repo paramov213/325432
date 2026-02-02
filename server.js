@@ -14,14 +14,12 @@ io.on('connection', (socket) => {
     socket.on('online', (username) => {
         socket.username = username;
         users.set(username, socket.id);
-        // Принудительно подписываем сокет на комнату с именем пользователя
         socket.join(username);
     });
 
     socket.on('private_msg', (data) => {
-        // Отправляем получателю
+        // Доставка обоим участникам
         io.to(data.to).emit('receive_msg', data);
-        // Отправляем отправителю (чтобы оба видели)
         io.to(data.from).emit('receive_msg', data);
     });
 
