@@ -18,11 +18,19 @@ let onlineUsers = {};
 io.on('connection', (socket) => {
     socket.on('online', (username) => {
         onlineUsers[username] = socket.id;
+        console.log(`User ${username} is now online`);
     });
+
     socket.on('private_msg', (data) => {
         const targetSid = onlineUsers[data.to];
-        if (targetSid) io.to(targetSid).emit('receive_msg', data);
+        // Отправка получателю
+        if (targetSid) {
+            io.to(targetSid).emit('receive_msg', data);
+        }
+        // Отправка отправителю для синхронизации интерфейса
+        socket.emit('receive_msg', data); 
     });
+
     socket.on('disconnect', () => {
         for (let user in onlineUsers) {
             if (onlineUsers[user] === socket.id) delete onlineUsers[user];
@@ -31,4 +39,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('Broke Server Running'));
+server.listen(PORT, () => console.log('Broke Server Started'));
