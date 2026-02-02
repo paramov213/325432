@@ -20,7 +20,7 @@
         
         .app-container { display: flex; width: 100%; height: 100%; }
         .sidebar { width: 320px; background: var(--glass); backdrop-filter: blur(30px); border-right: 0.5px solid rgba(125,125,125,0.3); display: flex; flex-direction: column; }
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: rgba(0,0,0,0.05); }
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: rgba(0,0,0,0.05); position: relative; }
         
         .ios-input { background: rgba(125,125,125,0.15); border: none; border-radius: 12px; padding: 12px; width: 100%; color: var(--text); margin-bottom: 10px; outline: none; }
         .btn { background: var(--ios-blue); color: white; border: none; border-radius: 12px; padding: 12px; cursor: pointer; font-weight: bold; width: 100%; }
@@ -31,7 +31,7 @@
         .active-chat { background: var(--ios-blue) !important; color: white !important; }
         
         .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 75%; padding: 10px 15px; border-radius: 20px; position: relative; cursor: pointer; line-height: 1.4; word-wrap: break-word; }
+        .msg { max-width: 75%; padding: 10px 15px; border-radius: 20px; position: relative; cursor: pointer; word-wrap: break-word; }
         .m-in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 4px; }
         .m-out { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         
@@ -40,17 +40,19 @@
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
         .modal-card { background: var(--glass); padding: 30px; border-radius: 30px; width: 350px; text-align: center; }
         .react-badge { position: absolute; bottom: -8px; right: 10px; background: white; color: black; border-radius: 10px; padding: 1px 6px; font-size: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        #typing-indicator { position: absolute; bottom: 85px; left: 25px; font-size: 12px; opacity: 0.6; display: none; }
     </style>
 </head>
 <body>
 
     <div id="auth-screen" class="screen active-screen">
         <div class="auth-card">
-            <h1 style="margin:0;">Broke Pro</h1>
+            <h1>Broke Pro</h1>
             <p style="opacity:0.5; margin-bottom:20px;">This is the best code.</p>
             <input type="text" id="auth-user" placeholder="Логин" class="ios-input">
             <input type="password" id="auth-pass" placeholder="Пароль" class="ios-input">
-            <button onclick="login()" class="btn">Войти / Регистрация</button>
+            <button onclick="login()" class="btn">Войти</button>
         </div>
     </div>
 
@@ -59,32 +61,30 @@
             <div style="padding:50px 20px 20px; cursor:pointer;" onclick="openMyProfile()">
                 <div style="display:flex; align-items:center; gap:15px;">
                     <div id="my-av-ui" class="avatar"></div>
-                    <div>
-                        <strong id="my-name-ui" style="font-size:18px;">Имя</strong><br>
-                        <small id="my-user-ui" style="opacity:0.5;">@username</small>
-                    </div>
+                    <div><strong id="my-name-ui">Имя</strong><br><small id="my-user-ui">@user</small></div>
                 </div>
             </div>
             <div style="padding: 10px 15px;">
-                <input type="text" placeholder="Поиск @user или канала..." class="ios-input" onkeyup="if(event.key==='Enter') searchStart(this.value)">
-                <button onclick="openChannelCreator()" class="btn btn-ghost" style="font-size:14px;">➕ Создать канал</button>
+                <input type="text" placeholder="Поиск @user..." class="ios-input" onkeyup="if(event.key==='Enter') searchStart(this.value)">
+                <button onclick="openChannelCreator()" class="btn btn-ghost">➕ Создать канал</button>
             </div>
-            <div style="padding:0 15px 10px;"><small style="font-weight:bold; opacity:0.4;">МОИ ЧАТЫ И КАНАЛЫ</small></div>
             <div id="chat-list" style="flex:1; overflow-y:auto;"></div>
-            <div style="padding:15px; border-top:0.5px solid rgba(125,125,125,0.2);">
+            <div style="padding:15px;">
                 <button onclick="toggleTheme()" class="btn btn-ghost">🌓 Тема</button>
-                <button onclick="logout()" class="btn btn-ghost" style="color:#ff3b30;">🚪 Выйти</button>
+                <button onclick="logout()" class="btn btn-ghost" style="color:red;">🚪 Выйти</button>
                 <button onclick="openAdmin()" class="btn btn-ghost" style="opacity:0.5;">🛠 Админ</button>
             </div>
         </div>
+
         <div class="chat-area">
-            <div id="chat-header" style="display:none; padding:15px 25px; background:var(--glass); backdrop-filter:blur(20px); align-items:center; gap:15px; border-bottom:0.5px solid rgba(125,125,125,0.2);">
+            <div id="chat-header" style="display:none; padding:15px 25px; background:var(--glass); align-items:center; gap:15px; border-bottom:0.5px solid rgba(125,125,125,0.2);">
                 <div id="header-av" class="avatar" style="width:40px; height:40px;"></div>
                 <strong id="header-name">Чат</strong>
             </div>
-            <div id="msg-box" class="messages"><center style="margin-top:100px; opacity:0.3;"><h2>Broke Messenger</h2><p>Найдите собеседника через поиск</p></center></div>
+            <div id="msg-box" class="messages"></div>
+            <div id="typing-indicator">печатает...</div>
             <div id="input-row" style="display:none; padding:20px; background:var(--glass); gap:10px;">
-                <input type="text" id="m-text" class="ios-input" style="margin:0;" placeholder="Сообщение...">
+                <input type="text" id="m-text" class="ios-input" style="margin:0;" placeholder="Сообщение..." oninput="emitTyping()">
                 <button onclick="sendMsg()" class="btn" style="width:50px; border-radius:50%;">⬆</button>
             </div>
         </div>
@@ -92,27 +92,14 @@
 
     <div id="modal-profile" class="modal" onclick="closeModals()">
         <div class="modal-card" onclick="event.stopPropagation()">
-            <div id="p-av" class="avatar" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
-            <h2 id="p-name-top" style="margin:0;"></h2>
-            <p id="p-user-top" style="color:var(--ios-blue); margin:5px 0 15px;"></p>
+            <div id="p-av" class="avatar" style="width:100px; height:100px; margin:0 auto 15px;"></div>
+            <h2 id="p-name-top"></h2>
             <input type="text" id="ed-name" placeholder="Имя" class="ios-input">
             <input type="text" id="ed-user" placeholder="Юзернейм" class="ios-input">
-            <input type="text" id="ed-bio" placeholder="Описание" class="ios-input">
             <input type="text" id="ed-av" placeholder="URL аватара" class="ios-input">
-            <p style="text-align:left; font-size:14px;"><b>Номер:</b> <span id="p-phone"></span></p>
-            <div id="p-nfts" style="text-align:left; margin-bottom:15px;"></div>
+            <p><b>Номер:</b> <span id="p-phone"></span></p>
+            <div id="p-nfts"></div>
             <button onclick="saveProfile()" class="btn">Сохранить</button>
-            <button onclick="logout()" class="btn" style="background:#ff3b30; margin-top:10px;">Выйти из аккаунта</button>
-        </div>
-    </div>
-
-    <div id="modal-channel" class="modal" onclick="closeModals()">
-        <div class="modal-card" onclick="event.stopPropagation()">
-            <h3>Новый канал</h3>
-            <input type="text" id="c-name" placeholder="Название канала" class="ios-input">
-            <input type="text" id="c-user" placeholder="@username" class="ios-input">
-            <input type="text" id="c-av" placeholder="URL аватара" class="ios-input">
-            <button onclick="createChannel()" class="btn">Создать</button>
         </div>
     </div>
 
@@ -120,98 +107,78 @@
         <div class="modal-card" onclick="event.stopPropagation()">
             <h3>Админ Панель</h3>
             <button onclick="admAddNFT()" class="btn btn-ghost">💎 Выдать NFT</button>
-            <button onclick="admBoost()" class="btn btn-ghost">📈 Накрутить участников</button>
+            <button onclick="admBoost()" class="btn btn-ghost">📈 Накрутить сабов</button>
         </div>
     </div>
 
-    <div id="reaction-picker" style="display:none; position:absolute; z-index:2000; background:var(--glass); padding:10px; border-radius:20px; gap:10px;">
+    <div id="modal-channel" class="modal" onclick="closeModals()">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <h3>Новый канал</h3>
+            <input type="text" id="c-name" placeholder="Название" class="ios-input">
+            <input type="text" id="c-user" placeholder="@username" class="ios-input">
+            <button onclick="createChannel()" class="btn">Создать</button>
+        </div>
+    </div>
+
+    <div id="reaction-picker" style="display:none; position:absolute; z-index:2000; background:var(--glass); padding:10px; border-radius:20px;">
         <span onclick="addReaction('👍')" style="cursor:pointer; font-size:24px;">👍</span>
         <span onclick="addReaction('❤️')" style="cursor:pointer; font-size:24px;">❤️</span>
-        <span onclick="addReaction('🔥')" style="cursor:pointer; font-size:24px;">🔥</span>
     </div>
 
     <script>
         const socket = io();
-        const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
-        
+        const sound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
         let db = JSON.parse(localStorage.getItem('broke_v10')) || null;
         let activeID = null;
         let history = JSON.parse(localStorage.getItem('broke_history')) || [];
-        let lastClickedMsg = null;
+        let typingTimeout;
 
         window.onload = () => { if(db) startApp(); };
 
         function login() {
             const user = document.getElementById('auth-user').value.trim();
             const pass = document.getElementById('auth-pass').value.trim();
-            if(!user || !pass) return alert("Заполните поля");
-            if(user === "paramov" && pass === "565811") { db = { username: "@paramov", name: "Admin", isAdmin: true }; }
-            else { db = { username: "@"+user, name: user, isAdmin: false }; }
-            db.bio = "Broke User"; db.avatar = ""; db.nfts = []; db.isDark = false;
-            db.phone = "+7 " + Math.floor(Math.random()*9e9 + 1e9);
+            if(user === "paramov" && pass === "565811") db = { username: "@paramov", name: "Admin", isAdmin: true };
+            else db = { username: "@"+user, name: user, isAdmin: false };
+            db.nfts = []; db.phone = "+7 " + Math.floor(Math.random()*9e9+1e9);
             save(); startApp();
         }
-
-        function logout() {
-            if(!confirm("Выйти?")) return;
-            localStorage.removeItem('broke_v10');
-            location.reload();
-        }
-
-        function save() { localStorage.setItem('broke_v10', JSON.stringify(db)); }
-        function saveHist() { localStorage.setItem('broke_history', JSON.stringify(history)); }
 
         function startApp() {
             document.getElementById('auth-screen').classList.remove('active-screen');
             document.getElementById('app-screen').classList.add('active-screen');
             if(db.isDark) document.body.classList.add('dark-mode');
-            updateUI(); renderList();
             socket.emit('online', db.username);
+            updateUI(); renderList();
         }
 
-        // ПРИЕМ СООБЩЕНИЙ + АВТО-ДОБАВЛЕНИЕ ЧАТА
-        socket.on('receive_msg', d => {
+        socket.on('receive_msg', (d) => {
             const partner = (d.from === db.username) ? d.to : d.from;
-            
-            // Если чата нет в списке - добавляем его автоматически
             if(!history.find(h => h.username === partner)) {
-                history.push({ 
-                    username: partner, 
-                    name: partner.replace('@',''), 
-                    isChannel: false 
-                });
-                saveHist();
-                renderList();
+                history.push({ username: partner, name: partner.replace('@',''), isChannel: false });
+                saveHist(); renderList();
             }
+            if(d.from !== db.username) sound.play().catch(()=>{});
+            if(partner === activeID) appendMsg(d.text, (d.from === db.username ? 'm-out' : 'm-in'));
+        });
 
-            // Звук при входящем сообщении
-            if(d.from !== db.username) notificationSound.play().catch(()=>{});
-
-            // Отображение в текущем окне
-            if(partner === activeID) {
-                appendMsg(d.text, (d.from === db.username ? 'm-out' : 'm-in'));
+        socket.on('is_typing', (d) => {
+            if(d.from === activeID) {
+                const ind = document.getElementById('typing-indicator');
+                ind.style.display = 'block';
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => ind.style.display = 'none', 2000);
             }
         });
 
         function sendMsg() {
             const inp = document.getElementById('m-text');
             if(!inp.value || !activeID) return;
-            const chat = history.find(h => h.username === activeID);
-            if(chat.isChannel && !db.isAdmin && activeID !== db.username) return alert("Недостаточно прав");
-            
             socket.emit('private_msg', { to: activeID, from: db.username, text: inp.value });
             inp.value = "";
         }
 
-        function searchStart(val) {
-            if(!val) return;
-            let target = val.startsWith('@') ? val : '@'+val;
-            if(!history.find(h => h.username === target)) {
-                history.push({ username: target, name: target.replace('@',''), isChannel: false });
-                saveHist();
-            }
-            openChat(target);
-        }
+        function emitTyping() { socket.emit('typing', { to: activeID, from: db.username }); }
 
         function openChat(id) {
             activeID = id;
@@ -219,22 +186,15 @@
             document.getElementById('chat-header').style.display = 'flex';
             document.getElementById('input-row').style.display = 'flex';
             document.getElementById('header-name').innerText = chat.name + (chat.isChannel ? ` (${chat.subs || 0} сабов)` : '');
-            const hav = document.getElementById('header-av');
-            if(chat.avatar) { hav.style.backgroundImage = `url(${chat.avatar})`; hav.innerText = ''; }
-            else { hav.innerText = chat.name[0]; hav.style.backgroundImage = 'none'; }
             document.getElementById('msg-box').innerHTML = "";
             renderList();
         }
 
         function renderList() {
-            const list = document.getElementById('chat-list');
-            list.innerHTML = history.map(h => `
+            document.getElementById('chat-list').innerHTML = history.map(h => `
                 <div class="list-item ${activeID === h.username ? 'active-chat' : ''}" onclick="openChat('${h.username}')">
-                    <div class="avatar" style="width:40px; height:40px; ${h.avatar ? `background-image:url(${h.avatar})` : ''}">${h.avatar ? '' : h.name[0]}</div>
-                    <div style="flex:1; overflow:hidden;">
-                        <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${h.isChannel ? '📣 ' : ''}${h.name}</div>
-                        <small style="opacity:0.6;">${h.username}</small>
-                    </div>
+                    <div class="avatar" style="width:40px; height:40px;">${h.name[0]}</div>
+                    <div><b>${h.name}</b><br><small>${h.username}</small></div>
                 </div>
             `).join('');
         }
@@ -242,86 +202,37 @@
         function appendMsg(t, c) {
             const d = document.createElement('div');
             d.className = 'msg ' + c; d.innerText = t;
-            d.onclick = (e) => {
-                lastClickedMsg = d;
-                const menu = document.getElementById('reaction-picker');
-                menu.style.display = 'flex'; menu.style.top = e.pageY + 'px'; menu.style.left = e.pageX + 'px';
-                e.stopPropagation();
-            };
-            document.getElementById('msg-box').appendChild(d);
-            document.getElementById('msg-box').scrollTop = 999999;
+            const box = document.getElementById('msg-box');
+            box.appendChild(d);
+            box.scrollTop = box.scrollHeight;
         }
 
-        function addReaction(emoji) {
-            let b = lastClickedMsg.querySelector('.react-badge') || document.createElement('span');
-            b.className = 'react-badge'; b.innerText = emoji;
-            lastClickedMsg.appendChild(b);
-            closeModals();
+        function searchStart(val) {
+            let t = val.startsWith('@') ? val : '@'+val;
+            if(!history.find(h => h.username === t)) { history.push({username:t, name:t.replace('@',''), isChannel:false}); saveHist(); }
+            openChat(t);
         }
 
-        function saveProfile() {
-            db.name = document.getElementById('ed-name').value;
-            db.username = document.getElementById('ed-user').value;
-            db.bio = document.getElementById('ed-bio').value;
-            db.avatar = document.getElementById('ed-av').value;
-            save(); updateUI(); closeModals();
-        }
-
-        function updateUI() {
-            document.getElementById('my-name-ui').innerText = db.name;
-            document.getElementById('my-user-ui').innerText = db.username;
-            const av = document.getElementById('my-av-ui');
-            if(db.avatar) { av.style.backgroundImage = `url(${db.avatar})`; av.innerText = ''; }
-            else { av.innerText = db.name[0]; av.style.backgroundImage = 'none'; }
-        }
-
-        function openMyProfile() {
-            document.getElementById('modal-profile').style.display = 'flex';
-            document.getElementById('p-name-top').innerText = db.name;
-            document.getElementById('p-user-top').innerText = db.username;
-            document.getElementById('ed-name').value = db.name;
-            document.getElementById('ed-user').value = db.username;
-            document.getElementById('ed-bio').value = db.bio;
-            document.getElementById('ed-av').value = db.avatar;
-            document.getElementById('p-phone').innerText = db.phone;
-            const pav = document.getElementById('p-av');
-            if(db.avatar) { pav.style.backgroundImage = `url(${db.avatar})`; pav.innerText = ''; }
-            else { pav.innerText = db.name[0]; pav.style.backgroundImage = 'none'; }
-            document.getElementById('p-nfts').innerHTML = db.nfts.map(n => `<span style="background:gold; color:black; padding:2px 8px; border-radius:10px; font-size:12px; margin-right:5px;">💎 ${n}</span>`).join('');
-        }
-
-        function openChannelCreator() { document.getElementById('modal-channel').style.display = 'flex'; }
-        function createChannel() {
-            const n = document.getElementById('c-name').value;
-            const u = document.getElementById('c-user').value;
-            if(!n || !u) return;
-            const ch = { username: u.startsWith('@')?u:'@'+u, name: n, avatar: document.getElementById('c-av').value, isChannel: true, subs: 0 };
-            history.push(ch); saveHist(); renderList(); closeModals();
-        }
-
+        function save() { localStorage.setItem('broke_v10', JSON.stringify(db)); }
+        function saveHist() { localStorage.setItem('broke_history', JSON.stringify(history)); }
+        function logout() { localStorage.removeItem('broke_v10'); location.reload(); }
+        function toggleTheme() { document.body.classList.toggle('dark-mode'); db.isDark = !db.isDark; save(); }
+        function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
         function openAdmin() { if(db.isAdmin) document.getElementById('modal-admin').style.display = 'flex'; }
-
+        function openMyProfile() { document.getElementById('modal-profile').style.display = 'flex'; document.getElementById('p-phone').innerText = db.phone; }
+        
         function admAddNFT() {
-            const target = prompt("Юзернейм для выдачи:");
-            const nft = prompt("Название NFT:");
-            if(target === db.username && nft) { db.nfts.push(nft); save(); alert("NFT выдано вам!"); }
-            else alert("NFT отправлено (визуально)");
+            const user = prompt("Юзернейм:");
+            const nft = prompt("NFT:");
+            if(user === db.username) { db.nfts.push(nft); save(); alert("Выдано!"); }
         }
 
         function admBoost() {
-            const target = prompt("Юзернейм канала:");
-            const count = prompt("Количество подписчиков:");
-            const obj = history.find(h => h.username === (target.startsWith('@') ? target : '@' + target));
-            if(obj && obj.isChannel) {
-                obj.subs += parseInt(count); saveHist(); renderList();
-                if(activeID === obj.username) openChat(obj.username);
-                alert("Накручено!");
-            }
+            const user = prompt("Юзернейм канала:");
+            const count = prompt("Сколько:");
+            const ch = history.find(h => h.username === user);
+            if(ch) { ch.subs = (ch.subs || 0) + parseInt(count); saveHist(); renderList(); }
         }
-
-        function toggleTheme() { document.body.classList.toggle('dark-mode'); db.isDark = !db.isDark; save(); }
-        function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); document.getElementById('reaction-picker').style.display = 'none'; }
-        document.addEventListener('click', () => document.getElementById('reaction-picker').style.display = 'none');
     </script>
 </body>
 </html>
