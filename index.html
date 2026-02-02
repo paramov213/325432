@@ -41,24 +41,25 @@
         .btn { background: var(--ios-blue); color: white; border: none; border-radius: 12px; padding: 14px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; }
         .btn-danger { background: #ff3b30 !important; }
         
-        #chat-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        .list-item { padding: 12px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-radius: 15px; margin: 4px 10px; }
+        #chat-list { flex: 1; overflow-y: auto; }
+        .list-item { padding: 12px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-radius: 15px; margin: 4px 10px; position: relative; }
         .active-chat { background: var(--ios-blue) !important; color: white !important; }
         
+        .unread-badge { background: #ff3b30; color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; position: absolute; right: 15px; top: 18px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
         .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 80%; padding: 10px 16px; border-radius: 20px; font-size: 16px; word-wrap: break-word; position: relative; }
+        .msg { max-width: 80%; padding: 10px 16px; border-radius: 20px; font-size: 16px; word-wrap: break-word; }
         .m-in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 4px; }
         .m-out { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         
         .avatar { 
             width: 48px; height: 48px; border-radius: 50%; background: var(--ios-blue); 
             display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; 
-            background-size: cover; background-position: center; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1);
+            background-size: cover; background-position: center; flex-shrink: 0;
         }
         
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(15px); }
-        .modal-card { background: var(--glass); padding: 25px; border-radius: 30px; width: 90%; max-width: 340px; text-align: center; border: 2px solid transparent; }
-        .status-online { color: #4cd964; font-size: 12px; font-weight: bold; }
+        .modal-card { background: var(--glass); padding: 25px; border-radius: 30px; width: 90%; max-width: 340px; text-align: center; }
         .nft-badge { background: linear-gradient(45deg, gold, orange); color: black; padding: 4px 10px; border-radius: 10px; font-size: 11px; font-weight: bold; margin: 2px; display: inline-block; }
     </style>
 </head>
@@ -106,7 +107,7 @@
                 <div id="header-av" class="avatar" style="width:38px; height:38px; margin-right:12px;" onclick="viewUserProfile(activeID)"></div>
                 <div style="flex:1;">
                     <strong id="header-name">Чат</strong><br>
-                    <small id="header-status" class="status-online" style="display:none;">в сети</small>
+                    <small id="header-status" style="color:#4cd964; font-size:12px; display:none;">в сети</small>
                 </div>
             </div>
             <div id="msg-box" class="messages"></div>
@@ -119,24 +120,22 @@
 
     <div id="modal-profile" class="modal" onclick="closeModals()">
         <div id="profile-card" class="modal-card" onclick="event.stopPropagation()">
-            <div id="p-av" class="avatar" style="width:90px; height:90px; margin:0 auto 15px; font-size:32px;"></div>
+            <div id="p-av" class="avatar" style="width:90px; height:90px; margin:0 auto 15px; font-size:32px; transition: 0.5s;"></div>
             <h2 id="p-name-top"></h2>
-            <p id="p-user-top" style="color:var(--ios-blue);"></p>
+            <p id="p-user-top" style="color:var(--ios-blue); margin-bottom: 10px;"></p>
             
             <div id="profile-edit-fields">
                 <input type="text" id="ed-name" placeholder="Имя" class="ios-input">
                 <input type="text" id="ed-about" placeholder="О себе" class="ios-input">
                 <input type="text" id="ed-av" placeholder="URL аватара" class="ios-input">
-                <label style="font-size:12px; opacity:0.6;">Цвет профиля:</label>
-                <input type="color" id="ed-color" style="width:100%; height:40px; border:none; border-radius:8px; margin-bottom:10px;">
+                <label style="font-size:12px; opacity:0.6;">Цвет свечения аватарки:</label>
+                <input type="color" id="ed-color" style="width:100%; height:40px; border:none; border-radius:8px; cursor: pointer;">
                 <button onclick="saveProfile()" class="btn">Сохранить</button>
             </div>
 
             <div id="p-info-static" style="text-align:left; margin-top:10px; border-top:0.5px solid rgba(125,125,125,0.3); padding-top:10px;">
                 <p><b>О себе:</b> <span id="p-about-val"></span></p>
-                <p><b>Номер:</b> <span id="p-phone"></span></p>
-                <div id="p-nfts" style="margin-bottom:15px;"></div>
-                <button id="del-chan-btn" class="btn btn-danger" style="display:none;" onclick="deleteActiveChannel()">Удалить канал</button>
+                <div id="p-nfts"></div>
             </div>
         </div>
     </div>
@@ -144,8 +143,8 @@
     <div id="modal-admin" class="modal" onclick="closeModals()">
         <div class="modal-card" onclick="event.stopPropagation()">
             <h3>Админ-панель</h3>
-            <button onclick="admAddNFT()" class="btn">💎 Выдать NFT пользователю</button>
-            <button onclick="admBoost()" class="btn">📈 Накрутить сабов</button>
+            <button onclick="admAddNFT()" class="btn">💎 Выдать NFT</button>
+            <button onclick="admDeleteAcc()" class="btn btn-danger" style="margin-top:10px;">🗑 Удалить аккаунт</button>
         </div>
     </div>
 
@@ -153,17 +152,17 @@
         <div class="modal-card" onclick="event.stopPropagation()">
             <h3>Создать канал</h3>
             <input type="text" id="c-name" placeholder="Название" class="ios-input">
-            <input type="text" id="c-user" placeholder="Юзернейм @..." class="ios-input">
+            <input type="text" id="c-user" placeholder="@link" class="ios-input">
             <button onclick="createChannel()" class="btn">Создать</button>
         </div>
     </div>
 
     <script>
         const socket = io();
-        // Загрузка данных
         let db = JSON.parse(localStorage.getItem('broke_v10')) || null;
         let history = JSON.parse(localStorage.getItem('broke_history')) || [];
         let msgLog = JSON.parse(localStorage.getItem('messages_history')) || []; 
+        let unread = JSON.parse(localStorage.getItem('unread_counts')) || {};
         let activeID = null;
 
         window.onload = () => { if(db) startApp(); };
@@ -172,17 +171,10 @@
             const user = document.getElementById('auth-user').value.trim();
             const pass = document.getElementById('auth-pass').value.trim();
             if(!user) return;
-
-            // Проверка уникальности при первой регистрации
-            if(!db) {
-                const isTaken = history.find(h => h.username === "@"+user && !h.isChannel);
-                if(isTaken && user !== "paramov") return alert("Этот логин уже занят!");
-            }
-
             if(user === "paramov" && pass === "565811") {
-                db = { username: "@paramov", name: "Admin", isAdmin: true, nfts: ["Создатель"], about: "This is the best code.", pColor: "#ffd700", phone: "+7 777 777 77 77" };
+                db = { username: "@paramov", name: "Admin", isAdmin: true, nfts: ["👑"], about: "This is the best code.", pColor: "#007AFF" };
             } else {
-                db = db || { username: "@"+user, name: user, isAdmin: false, nfts: ["Старожил"], about: "This is the best code.", pColor: "#ffffff00", phone: "+7 " + Math.floor(Math.random()*9e9+1e9) };
+                db = db || { username: "@"+user, name: user, isAdmin: false, nfts: [], about: "This is the best code.", pColor: "#ffffff00" };
             }
             save(); startApp();
         }
@@ -195,31 +187,53 @@
             updateUI(); renderList();
         }
 
-        // Сохранение истории сообщений бесконечно
         socket.on('receive_msg', (d) => {
+            const partner = (d.from === db.username) ? d.to : d.from;
+            // Проверка на дубликат
+            if(msgLog.some(m => m.text === d.text && m.from === d.from && Math.abs(m.time - Date.now()) < 500)) return;
+            
+            d.time = Date.now();
             msgLog.push(d);
             localStorage.setItem('messages_history', JSON.stringify(msgLog));
-            if(activeID === (d.from === db.username ? d.to : d.from)) {
+
+            if(activeID === partner) {
                 appendMsg(d.text, d.from === db.username ? 'm-out' : 'm-in');
                 document.getElementById('header-status').style.display = 'block';
+            } else if(d.from !== db.username) {
+                unread[partner] = (unread[partner] || 0) + 1;
+                localStorage.setItem('unread_counts', JSON.stringify(unread));
+                renderList();
             }
         });
 
         function sendMsg() {
             const inp = document.getElementById('m-text');
             if(!inp.value.trim() || !activeID) return;
-            const data = { to: activeID, from: db.username, text: inp.value };
+            const data = { to: activeID, from: db.username, text: inp.value, time: Date.now() };
             socket.emit('private_msg', data);
-            msgLog.push(data); // Дублируем для локального сохранения
+            
+            // Локальное отображение без дублирования
+            msgLog.push(data);
             localStorage.setItem('messages_history', JSON.stringify(msgLog));
             appendMsg(inp.value, 'm-out');
             inp.value = "";
         }
 
+        function appendMsg(t, c) {
+            const d = document.createElement('div');
+            d.className = 'msg ' + c; d.innerText = t;
+            const box = document.getElementById('msg-box');
+            box.appendChild(d);
+            box.scrollTop = box.scrollHeight;
+        }
+
         function openChat(id) {
             activeID = id;
+            unread[id] = 0;
+            localStorage.setItem('unread_counts', JSON.stringify(unread));
             document.getElementById('app-screen').classList.add('chat-open');
-            const user = history.find(h => h.username === id);
+            
+            const user = history.find(h => h.username === id) || { name: id, username: id };
             document.getElementById('chat-header').style.display = 'flex';
             document.getElementById('input-row').style.display = 'flex';
             document.getElementById('header-name').innerText = user.name;
@@ -231,43 +245,23 @@
             document.getElementById('msg-box').innerHTML = "";
             msgLog.filter(m => (m.from === id && m.to === db.username) || (m.from === db.username && m.to === id))
                   .forEach(m => appendMsg(m.text, m.from === db.username ? 'm-out' : 'm-in'));
-        }
-
-        function openMyProfile() {
-            openModal('modal-profile');
-            document.getElementById('profile-edit-fields').style.display = 'block';
-            document.getElementById('del-chan-btn').style.display = 'none';
-            document.getElementById('ed-name').value = db.name;
-            document.getElementById('ed-about').value = db.about;
-            document.getElementById('ed-av').value = db.avatar || "";
-            document.getElementById('ed-color').value = db.pColor;
-            showProfileData(db);
-        }
-
-        function viewUserProfile(username) {
-            const user = history.find(h => h.username === username);
-            openModal('modal-profile');
-            document.getElementById('profile-edit-fields').style.display = 'none';
-            
-            // Показать кнопку удаления только если это канал и ты админ или владелец
-            if(user.isChannel && (db.isAdmin || user.owner === db.username)) {
-                document.getElementById('del-chan-btn').style.display = 'block';
-            } else {
-                document.getElementById('del-chan-btn').style.display = 'none';
-            }
-            showProfileData(user);
+            renderList();
         }
 
         function showProfileData(user) {
+            if(!user) return;
             document.getElementById('p-name-top').innerText = user.name;
             document.getElementById('p-user-top').innerText = user.username;
             const pav = document.getElementById('p-av');
             pav.style.backgroundImage = user.avatar ? `url('${user.avatar}')` : 'none';
             pav.innerText = user.avatar ? '' : user.name[0];
+            
+            // СВЕТ ВОКРУГ АВАТАРКИ
+            pav.style.boxShadow = user.pColor && user.pColor !== '#ffffff00' ? `0 0 25px ${user.pColor}` : 'none';
+            pav.style.border = user.pColor && user.pColor !== '#ffffff00' ? `2px solid ${user.pColor}` : 'none';
+
             document.getElementById('p-about-val').innerText = user.about || "This is the best code.";
-            document.getElementById('p-phone').innerText = user.isChannel ? "Канал" : (user.phone || "Скрыт");
             document.getElementById('p-nfts').innerHTML = (user.nfts || []).map(n => `<span class="nft-badge">💎 ${n}</span>`).join('');
-            document.getElementById('profile-card').style.backgroundColor = user.pColor || 'var(--glass)';
         }
 
         function saveProfile() {
@@ -275,65 +269,45 @@
             db.about = document.getElementById('ed-about').value;
             db.avatar = document.getElementById('ed-av').value;
             db.pColor = document.getElementById('ed-color').value;
-            save(); updateUI(); renderList(); closeModals();
-        }
-
-        function deleteActiveChannel() {
-            if(!confirm("Удалить этот канал навсегда?")) return;
-            history = history.filter(h => h.username !== activeID);
-            saveHist(); renderList(); closeChat(); closeModals();
-        }
-
-        function createChannel() {
-            const n = document.getElementById('c-name').value.trim();
-            const u = document.getElementById('c-user').value.trim();
-            const id = u.startsWith('@') ? u : '@'+u;
-            if(history.find(h => h.username === id)) return alert("Занято!");
             
-            history.push({ 
-                username: id, name: n, isChannel: true, owner: db.username,
-                subs: 0, avatar: "", nfts: ["Официальный канал"], pColor: "#e3f2fd", about: "Добро пожаловать в наш канал!" 
-            });
-            saveHist(); renderList(); closeModals();
-        }
+            // Обновляем себя в истории, чтобы другие видели изменения
+            const idx = history.findIndex(h => h.username === db.username);
+            if(idx !== -1) history[idx] = {...db};
+            else history.push({...db});
 
-        function admAddNFT() {
-            const target = prompt("Введите юзернейм пользователя (@username):");
-            if(!target) return;
-            const user = (target === db.username) ? db : history.find(h => h.username === target);
-            if(!user) return alert("Пользователь не найден в истории!");
-            
-            const nftName = prompt("Введите название NFT:");
-            if(nftName) {
-                user.nfts = user.nfts || [];
-                user.nfts.push(nftName);
-                if(target === db.username) save(); else saveHist();
-                alert("NFT успешно выдано!");
-            }
-        }
-
-        function admBoost() {
-            const u = prompt("Юзернейм канала:");
-            const c = prompt("Количество подписчиков:");
-            const ch = history.find(h => h.username === u);
-            if(ch) { ch.subs = (parseInt(ch.subs) || 0) + parseInt(c); saveHist(); renderList(); }
+            save(); saveHist(); updateUI(); renderList(); closeModals();
         }
 
         function searchStart(val) {
             let t = val.startsWith('@') ? val : '@'+val;
-            if(!history.find(h => h.username === t)) {
-                history.push({username:t, name:t.replace('@',''), avatar: "", about: "User Broke", nfts:[], phone: "+7...", pColor: "#ffffff00"});
-                saveHist();
+            const found = history.find(h => h.username === t);
+            if(!found) {
+                alert("Ничего не найдено!");
+            } else {
+                openChat(found.username);
             }
-            renderList(); openChat(t);
         }
 
-        function appendMsg(t, c) {
-            const d = document.createElement('div');
-            d.className = 'msg ' + c; d.innerText = t;
-            const box = document.getElementById('msg-box');
-            box.appendChild(d);
-            box.scrollTop = box.scrollHeight;
+        function admDeleteAcc() {
+            const target = prompt("Введите юзернейм для удаления (@username):");
+            if(target) {
+                if(!history.find(h => h.username === target)) return alert("Пользователь не найден!");
+                history = history.filter(h => h.username !== target);
+                saveHist(); renderList();
+                alert("Аккаунт удален.");
+            }
+        }
+
+        function renderList() {
+            document.getElementById('chat-list').innerHTML = history.map(h => `
+                <div class="list-item ${activeID === h.username ? 'active-chat' : ''}" onclick="openChat('${h.username}')">
+                    <div class="avatar" style="background-image:url('${h.avatar || ''}')">${h.avatar ? '' : h.name[0]}</div>
+                    <div style="flex:1; overflow:hidden;">
+                        <b>${h.name}</b><br><small style="opacity:0.6;">${h.username}</small>
+                    </div>
+                    ${unread[h.username] > 0 ? `<div class="unread-badge">${unread[h.username]}</div>` : ''}
+                </div>
+            `).join('');
         }
 
         function updateUI() {
@@ -344,16 +318,24 @@
             av.innerText = db.avatar ? '' : db.name[0];
         }
 
-        function renderList() {
-            document.getElementById('chat-list').innerHTML = history.map(h => `
-                <div class="list-item ${activeID === h.username ? 'active-chat' : ''}" onclick="openChat('${h.username}')">
-                    <div class="avatar" style="background-image:url('${h.avatar || ''}')">${h.avatar ? '' : h.name[0]}</div>
-                    <div style="flex:1; overflow:hidden;">
-                        <b>${h.isChannel ? '📣 ' : ''}${h.name}</b><br>
-                        <small style="opacity:0.6;">${h.username} ${h.subs ? '• '+h.subs+' сабов' : ''}</small>
-                    </div>
-                </div>
-            `).join('');
+        function createChannel() {
+            const n = document.getElementById('c-name').value;
+            const u = document.getElementById('c-user').value;
+            const id = u.startsWith('@') ? u : '@'+u;
+            if(history.find(h => h.username === id)) return alert("Занято!");
+            history.push({ username: id, name: n, isChannel: true, avatar: "", about: "Канал", nfts: ["📢"], pColor: "#007AFF" });
+            saveHist(); renderList(); closeModals();
+        }
+
+        function admAddNFT() {
+            const target = prompt("Кому выдать NFT? (@username):");
+            const nft = prompt("Название NFT:");
+            const u = (target === db.username) ? db : history.find(h => h.username === target);
+            if(u) { 
+                u.nfts = u.nfts || []; u.nfts.push(nft); 
+                target === db.username ? save() : saveHist(); 
+                alert("NFT Выдано!"); 
+            } else alert("Пользователь не найден!");
         }
 
         function save() { localStorage.setItem('broke_v10', JSON.stringify(db)); }
@@ -361,8 +343,26 @@
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
         function closeChat() { document.getElementById('app-screen').classList.remove('chat-open'); activeID = null; }
-        function logout() { if(confirm("Выйти? Все данные будут сохранены в этом браузере.")) { location.reload(); } }
+        function logout() { localStorage.clear(); location.reload(); }
         function toggleTheme() { document.body.classList.toggle('dark-mode'); db.isDark = !db.isDark; save(); }
+        
+        function openMyProfile() { 
+            openModal('modal-profile'); 
+            document.getElementById('profile-edit-fields').style.display = 'block'; 
+            document.getElementById('ed-name').value = db.name;
+            document.getElementById('ed-about').value = db.about;
+            document.getElementById('ed-av').value = db.avatar || "";
+            document.getElementById('ed-color').value = db.pColor || "#000000";
+            showProfileData(db); 
+        }
+        
+        function viewUserProfile(id) { 
+            const user = history.find(h => h.username === id);
+            if(!user) return;
+            openModal('modal-profile'); 
+            document.getElementById('profile-edit-fields').style.display = 'none'; 
+            showProfileData(user); 
+        }
     </script>
 </body>
 </html>
