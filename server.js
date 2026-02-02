@@ -4,25 +4,21 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http, { cors: { origin: "*" } });
 const path = require('path');
 
-// Указываем серверу, где лежат статические файлы
-app.use(express.static(__dirname));
+// Обслуживание статических файлов
+app.use(express.static(path.join(__dirname)));
 
-// Главный маршрут, который отдает твой мессенджер
+// Главная страница
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Обработка 404 ошибки (чтобы не было Not Found)
-app.use((req, res) => {
-    res.status(404).sendFile(path.join(__dirname, 'index.html'));
-});
-
+// Логика чата
 let onlineUsers = {};
 
 io.on('connection', (socket) => {
     socket.on('online', (username) => {
         onlineUsers[username] = socket.id;
-        console.log(`${username} подключился`);
+        console.log(`User ${username} connected`);
     });
 
     socket.on('private_msg', (data) => {
@@ -40,4 +36,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Broke Server работает на порту ${PORT}`));
+http.listen(PORT, () => console.log(`Server running on port ${PORT}`));
