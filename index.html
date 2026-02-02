@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Broke Messenger</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root { --blue: #007AFF; --glass: rgba(255,255,255,0.7); --text: #000; --bg-blur: blur(25px); }
+        body.dark-mode { --glass: rgba(30,30,30,0.85); --text: #fff; background-color: #000; }
+        * { box-sizing: border-box; transition: 0.3s; font-family: -apple-system, sans-serif; }
+        body, html { margin:0; padding:0; height:100%; overflow:hidden; color:var(--text); background: #000 url('https://w.wallhaven.cc/full/ex/wallhaven-ex96pw.png') center/cover; }
+        
+        .screen { display:none; height:100vh; width:100vw; }
+        .active-screen { display:flex; animation: fade 0.4s; }
+        @keyframes fade { from {opacity:0; transform:scale(0.95);} to {opacity:1; transform:scale(1);} }
+
+        #auth-screen { justify-content:center; align-items:center; backdrop-filter: blur(40px); }
+        .auth-card { background:var(--glass); padding:40px; border-radius:30px; width:320px; text-align:center; }
+        
+        .app-container { display:flex; height:100%; width:100%; }
+        .sidebar { width:320px; background:var(--glass); backdrop-filter:var(--bg-blur); border-right:1px solid rgba(0,0,0,0.1); display:flex; flex-direction:column; }
+        .chat-area { flex:1; display:flex; flex-direction:column; }
+        
+        .avatar { width:60px; height:60px; border-radius:50%; background:var(--blue); display:flex; align-items:center; justify-content:center; color:#fff; font-size:24px; font-weight:bold; background-size:cover; }
+        .msg { max-width:70%; padding:12px; border-radius:18px; margin:5px; position:relative; cursor:pointer; }
+        .m-in { background:#e5e5ea; align-self:flex-start; color:#000; }
+        .m-out { background:var(--blue); align-self:flex-end; color:#fff; }
+        
+        .ios-input { background:rgba(0,0,0,0.05); border:none; border-radius:15px; padding:12px; width:100%; outline:none; color:var(--text); }
+        .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:100; justify-content:center; align-items:center; backdrop-filter:blur(10px); }
+        .modal-card { background:var(--glass); padding:30px; border-radius:25px; width:300px; text-align:center; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen" class="screen">
+        <div class="auth-card">
+            <h1>Broke</h1>
+            <p>This is the best code.</p>
+            <input type="text" id="reg-name" placeholder="@username" class="ios-input">
+            <button onclick="register()" style="margin-top:15px; width:100%; padding:12px; border-radius:15px; border:none; background:var(--blue); color:#fff; font-weight:bold;">Войти</button>
+        </div>
+    </div>
+
+    <div id="main-screen" class="screen app-container">
+        <div class="sidebar">
+            <div style="padding:40px 20px 20px;" onclick="openP('me')">
+                <div id="my-av" class="avatar"></div>
+                <h3 id="my-name">User</h3>
+                <small id="my-user" style="opacity:0.5;">@user</small>
+            </div>
+            <div style="padding:10px 20px;">
+                <input type="text" placeholder="Поиск @user..." class="ios-input" onkeyup="search(event)">
+            </div>
+            <button onclick="toggleD()" style="margin:10px 20px; padding:10px; border-radius:10px; border:none;">🌓 Тема</button>
+            <button onclick="setAv()" style="margin:0 20px; padding:10px; border-radius:10px; border:none;">🖼 Аватар</button>
+            <button onclick="admin()" style="margin:10px 20px; padding:10px; border-radius:10px; border:none; opacity:0.3;">🛠 Админ</button>
+        </div>
+        <div class="chat-area">
+            <div style="padding:15px; background:var(--glass); backdrop-filter:var(--bg-blur); font-weight:bold;" id="chat-head">Выберите чат</div>
+            <div id="box" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; padding:15px;"></div>
+            <div style="padding:20px; display:flex; gap:10px; background:var(--glass);">
+                <input type="text" id="msg-in" class="ios-input" placeholder="Сообщение...">
+                <button onclick="send()" style="border:none; background:none; color:var(--blue); font-size:25px;">⬆</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="p-modal" class="modal" onclick="this.style.display='none'">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div id="p-av" class="avatar" style="margin:0 auto 15px; width:80px; height:80px;"></div>
+            <h2 id="p-name"></h2>
+            <p id="p-user" style="color:var(--blue)"></p>
+            <div id="nfts" style="margin:10px 0;"></div>
+            <button onclick="document.querySelectorAll('.modal').forEach(m=>m.style.display='none')" class="ios-input">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let db = JSON.parse(localStorage.getItem('broke_v8')) || null;
+        let active = null;
+
+        window.onload = () => { if(db){ if(db.dark) document.body.classList.add('dark-mode'); init(); } else document.getElementById('auth-screen').classList.add('active-screen'); };
+
+        function register() {
+            const v = document.getElementById('reg-name').value; if(v.length<2) return;
+            db = { user: v.startsWith('@')?v:'@'+v, name:v.replace('@',''), dark:false, av:'', nfts:[] };
+            save(); init();
+        }
+        function save() { localStorage.setItem('broke_v8', JSON.stringify(db)); }
+        function init() { document.getElementById('auth-screen').classList.remove('active-screen'); document.getElementById('main-screen').classList.add('active-screen'); ui(); socket.emit('online', db.user); }
+        function ui() {
+            document.getElementById('my-name').innerText = db.name;
+            document.getElementById('my-user').innerText = db.user;
+            const el = document.getElementById('my-av');
+            if(db.av) el.style.backgroundImage = `url(${db.av})`; else el.innerText = db.name[0].toUpperCase();
+        }
+        function toggleD() { document.body.classList.toggle('dark-mode'); db.dark = !db.dark; save(); }
+        function setAv() { const u = prompt("URL фото:"); if(u){db.av=u; save(); ui();} }
+        function search(e) { if(e.key==="Enter"){ active=e.target.value.startsWith('@')?e.target.value:'@'+e.target.value; document.getElementById('chat-head').innerText=active; document.getElementById('box').innerHTML=""; } }
+        function send() { const i = document.getElementById('msg-in'); if(!i.value || !active) return; addMsg(i.value, 'm-out'); socket.emit('private_msg', {to:active, from:db.user, text:i.value}); i.value=""; }
+        socket.on('receive_msg', d => { if(d.from === active) addMsg(d.text, 'm-in'); });
+        function addMsg(t, c) { const d = document.createElement('div'); d.className='msg '+c; d.innerText=t; document.getElementById('box').appendChild(d); document.getElementById('box').scrollTop=9999; }
+        function admin() { if(prompt("Login")==="парамов" && prompt("Pass")==="565811") { const n=prompt("NFT name:"); if(n){db.nfts.push(n); save(); alert("OK");}} }
+        function openP(who) {
+            document.getElementById('p-modal').style.display='flex';
+            document.getElementById('p-name').innerText = db.name;
+            document.getElementById('p-user').innerText = db.user;
+            document.getElementById('nfts').innerHTML = db.nfts.map(n=>`<span style="background:gold; padding:3px; border-radius:5px; font-size:10px; margin:2px;">💎 ${n}</span>`).join('');
+            const pav = document.getElementById('p-av'); if(db.av) pav.style.backgroundImage=`url(${db.av})`; else pav.innerText=db.name[0];
+        }
+    </script>
+</body>
+</html>
