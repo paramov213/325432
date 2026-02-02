@@ -13,30 +13,29 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-let onlineUsers = {};
+let users = new Map();
 
 io.on('connection', (socket) => {
     socket.on('online', (username) => {
-        onlineUsers[username] = socket.id;
-        console.log(`User ${username} is now online`);
+        socket.username = username;
+        users.set(username, socket.id);
     });
 
     socket.on('private_msg', (data) => {
-        const targetSid = onlineUsers[data.to];
-        // Отправка получателю
-        if (targetSid) {
-            io.to(targetSid).emit('receive_msg', data);
-        }
-        // Отправка отправителю для синхронизации интерфейса
-        socket.emit('receive_msg', data); 
+        const targetSid = users.get(data.to);
+        if (targetSid) io.to(targetSid).emit('receive_msg', data);
+        socket.emit('receive_msg', data); // Подтверждение себе
+    });
+
+    socket.on('typing', (data) => {
+        const targetSid = users.get(data.to);
+        if (targetSid) io.to(targetSid).emit('is_typing', data);
     });
 
     socket.on('disconnect', () => {
-        for (let user in onlineUsers) {
-            if (onlineUsers[user] === socket.id) delete onlineUsers[user];
-        }
+        if (socket.username) users.delete(socket.username);
     });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('Broke Server Started'));
+server.listen(PORT, () => console.log('Broke Server 2026 Ready'));
