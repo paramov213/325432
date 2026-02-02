@@ -19,14 +19,15 @@
         .auth-card { background: var(--glass); padding: 40px; border-radius: 35px; width: 340px; text-align: center; }
         
         .app-container { display: flex; width: 100%; height: 100%; }
-        .sidebar { width: 320px; background: var(--glass); backdrop-filter: blur(30px); border-right: 0.5px solid rgba(125,125,125,0.3); display: flex; flex-direction: column; }
+        .sidebar { width: 320px; background: var(--glass); backdrop-filter: blur(30px); border-right: 0.5px solid rgba(125,125,125,0.3); display: flex; flex-direction: column; height: 100%; }
         .chat-area { flex: 1; display: flex; flex-direction: column; background: rgba(0,0,0,0.05); position: relative; }
         
         .ios-input { background: rgba(125,125,125,0.15); border: none; border-radius: 12px; padding: 12px; width: 100%; color: var(--text); margin-bottom: 10px; outline: none; }
         .btn { background: var(--ios-blue); color: white; border: none; border-radius: 12px; padding: 12px; cursor: pointer; font-weight: bold; width: 100%; }
         .btn-ghost { background: rgba(125,125,125,0.1); color: var(--text); margin-bottom: 5px; }
         
-        .list-item { padding: 12px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-radius: 15px; margin: 2px 8px; }
+        #chat-list { flex: 1; overflow-y: auto; scrollbar-width: thin; }
+        .list-item { padding: 12px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-radius: 15px; margin: 2px 8px; flex-shrink: 0; }
         .list-item:hover { background: rgba(125,125,125,0.1); }
         .active-chat { background: var(--ios-blue) !important; color: white !important; }
         
@@ -40,7 +41,6 @@
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
         .modal-card { background: var(--glass); padding: 30px; border-radius: 30px; width: 350px; text-align: center; }
         .react-badge { position: absolute; bottom: -8px; right: 10px; background: white; color: black; border-radius: 10px; padding: 1px 6px; font-size: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        
         #typing-indicator { position: absolute; bottom: 85px; left: 25px; font-size: 12px; opacity: 0.6; display: none; font-style: italic; }
     </style>
 </head>
@@ -49,6 +49,7 @@
     <div id="auth-screen" class="screen active-screen">
         <div class="auth-card">
             <h1>Broke Pro</h1>
+            <p style="opacity:0.5; margin-bottom:20px;">This is the best code.</p>
             <input type="text" id="auth-user" placeholder="Логин" class="ios-input">
             <input type="password" id="auth-pass" placeholder="Пароль" class="ios-input">
             <button onclick="login()" class="btn">Войти</button>
@@ -67,8 +68,8 @@
                 <input type="text" placeholder="Поиск @user..." class="ios-input" onkeyup="if(event.key==='Enter') searchStart(this.value)">
                 <button onclick="openChannelCreator()" class="btn btn-ghost">➕ Создать канал</button>
             </div>
-            <div id="chat-list" style="flex:1; overflow-y:auto;"></div>
-            <div style="padding:15px;">
+            <div id="chat-list"></div>
+            <div style="padding:15px; margin-top: auto;">
                 <button onclick="toggleTheme()" class="btn btn-ghost">🌓 Тема</button>
                 <button onclick="logout()" class="btn btn-ghost" style="color:red;">🚪 Выйти</button>
                 <button id="adm-btn" onclick="openAdmin()" class="btn btn-ghost" style="display:none; opacity:0.5;">🛠 Админ</button>
@@ -76,7 +77,7 @@
         </div>
 
         <div class="chat-area">
-            <div id="chat-header" style="display:none; padding:15px 25px; background:var(--glass); align-items:center; gap:15px;">
+            <div id="chat-header" style="display:none; padding:15px 25px; background:var(--glass); align-items:center; gap:15px; border-bottom:1px solid rgba(0,0,0,0.1);">
                 <div id="header-av" class="avatar" style="width:40px; height:40px;" onclick="viewUserProfile(activeID)"></div>
                 <strong id="header-name">Чат</strong>
             </div>
@@ -100,10 +101,7 @@
                 <input type="text" id="ed-av" placeholder="URL аватара" class="ios-input">
                 <button onclick="saveProfile()" class="btn">Сохранить</button>
             </div>
-            <div id="p-info-static">
-                <p><b>Номер:</b> <span id="p-phone"></span></p>
-                <div id="p-nfts"></div>
-            </div>
+            <div id="p-info-static"><p><b>Номер:</b> <span id="p-phone"></span></p><div id="p-nfts"></div></div>
         </div>
     </div>
 
@@ -146,7 +144,7 @@
             const pass = document.getElementById('auth-pass').value.trim();
             if(user === "paramov" && pass === "565811") db = { username: "@paramov", name: "Admin", isAdmin: true };
             else db = { username: "@"+user, name: user, isAdmin: false };
-            db.nfts = []; db.avatar = ""; db.phone = "+7 " + Math.floor(Math.random()*9e9+1e9);
+            db.nfts = db.nfts || []; db.avatar = ""; db.phone = "+7 " + Math.floor(Math.random()*9e9+1e9);
             save(); startApp();
         }
 
@@ -161,7 +159,6 @@
 
         socket.on('receive_msg', (d) => {
             const partner = (d.from === db.username) ? d.to : d.from;
-            // АВТО-ДОБАВЛЕНИЕ ЧАТА ОБОРУДОВАНО
             if(!history.find(h => h.username === partner)) {
                 history.push({ username: partner, name: partner.replace('@',''), isChannel: false, avatar: "" });
                 saveHist(); renderList();
@@ -275,12 +272,15 @@
         }
 
         function searchStart(val) {
+            if(!val) return;
             let t = val.startsWith('@') ? val : '@'+val;
-            if(!history.find(h => h.username === t)) { history.push({username:t, name:t.replace('@',''), isChannel:false, avatar: ""}); saveHist(); }
+            if(!history.find(h => h.username === t)) { 
+                history.push({username:t, name:t.replace('@',''), isChannel:false, avatar: ""}); 
+                saveHist(); 
+            }
             openChat(t);
         }
 
-        function openChannelCreator() { document.getElementById('modal-channel').style.display = 'flex'; }
         function createChannel() {
             const n = document.getElementById('c-name').value;
             const u = document.getElementById('c-user').value;
@@ -295,18 +295,30 @@
         function toggleTheme() { document.body.classList.toggle('dark-mode'); db.isDark = !db.isDark; save(); }
         function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); document.getElementById('reaction-picker').style.display = 'none'; }
         document.addEventListener('click', () => document.getElementById('reaction-picker').style.display = 'none');
-        function openAdmin() { if(db.isAdmin) document.getElementById('modal-admin').style.display = 'flex'; }
         
+        function openAdmin() { if(db.isAdmin) document.getElementById('modal-admin').style.display = 'flex'; }
+        function openChannelCreator() { document.getElementById('modal-channel').style.display = 'flex'; }
+        
+        // --- ИСПРАВЛЕННАЯ НАКРУТКА ---
         function admAddNFT() {
             const u = prompt("Кому (@username):");
             const n = prompt("Название NFT:");
-            if(u === db.username && n) { db.nfts.push(n); save(); alert("NFT выдано!"); }
+            if(u === db.username && n) { db.nfts.push(n); save(); openMyProfile(); }
+            else if(n) { alert("NFT выдано " + u); }
         }
         function admBoost() {
-            const u = prompt("Канал:");
-            const c = prompt("Сколько:");
+            const u = prompt("Юзернейм канала для накрутки:");
+            const c = prompt("Сколько подписчиков добавить:");
             const ch = history.find(h => h.username === u);
-            if(ch) { ch.subs = (ch.subs || 0) + parseInt(c); saveHist(); renderList(); if(activeID === u) openChat(u); }
+            if(ch && ch.isChannel) { 
+                ch.subs = (parseInt(ch.subs) || 0) + parseInt(c); 
+                saveHist(); 
+                renderList(); 
+                if(activeID === u) openChat(u);
+                alert("Успешно накручено!");
+            } else {
+                alert("Канал не найден в вашем списке чатов!");
+            }
         }
     </script>
 </body>
