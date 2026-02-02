@@ -8,19 +8,20 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(__dirname));
 
+// Хранилище активных соединений: username -> socketId
 let users = new Map();
 
 io.on('connection', (socket) => {
     socket.on('online', (username) => {
         socket.username = username;
         users.set(username, socket.id);
-        console.log(`User ${username} connected`);
+        console.log(`Пользователь ${username} в сети`);
     });
 
     socket.on('private_msg', (data) => {
         const targetSid = users.get(data.to);
         if (targetSid) io.to(targetSid).emit('receive_msg', data);
-        socket.emit('receive_msg', data); 
+        socket.emit('receive_msg', data); // Чтобы отправитель видел сообщение у себя
     });
 
     socket.on('typing', (data) => {
@@ -33,4 +34,5 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(3000, () => console.log('Broke Server 2026 Ready'));
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log('Broke Server 2026: Ready'));
