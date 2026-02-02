@@ -13,7 +13,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-const users = {}; // Храним socket.id по юзернеймам
+const users = {}; 
 
 io.on('connection', (socket) => {
     socket.on('online', (username) => {
@@ -22,14 +22,14 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('user_status', { username, status: 'online' });
     });
 
+    socket.on('update_profile_broadcast', (userData) => {
+        socket.broadcast.emit('user_profile_updated', userData);
+    });
+
     socket.on('typing', (data) => {
         if (users[data.to]) {
             io.to(users[data.to]).emit('display_typing', { from: data.from });
         }
-    });
-
-    socket.on('update_profile_broadcast', (userData) => {
-        socket.broadcast.emit('user_profile_updated', userData);
     });
 
     socket.on('private_msg', (data) => {
@@ -47,5 +47,5 @@ io.on('connection', (socket) => {
 });
 
 server.listen(3000, () => {
-    console.log('Broke Pro Max: http://localhost:3000');
+    console.log('Broke Pro Max Server: http://localhost:3000');
 });
