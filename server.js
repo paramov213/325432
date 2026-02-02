@@ -24,7 +24,7 @@ io.on('connection', (socket) => {
     socket.on('private_msg', (data) => {
         const targetSid = users.get(data.to);
         if (targetSid) io.to(targetSid).emit('receive_msg', data);
-        socket.emit('receive_msg', data); // Подтверждение себе
+        socket.emit('receive_msg', data); 
     });
 
     socket.on('typing', (data) => {
