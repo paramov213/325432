@@ -3,366 +3,339 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Broke Pro</title>
+    <title>Broke Pro Max</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
             --ios-blue: #007AFF;
             --glass: rgba(255, 255, 255, 0.8);
-            --bg-blur: blur(25px);
             --text: #000;
-            --secondary: rgba(0,0,0,0.05);
+            --msg-in: #e5e5ea;
         }
         body.dark-mode {
-            --glass: rgba(28, 28, 30, 0.9);
+            --glass: rgba(30, 30, 30, 0.9);
             --text: #fff;
-            --secondary: rgba(255,255,255,0.1);
+            --msg-in: #3a3a3c;
             background: #000;
         }
-        * { box-sizing: border-box; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: -apple-system, system-ui, sans-serif; }
-        body, html { margin:0; padding:0; height:100%; overflow:hidden; color:var(--text); background: #000 url('https://w.wallhaven.cc/full/ex/wallhaven-ex96pw.png') center/cover no-repeat; }
+        * { box-sizing: border-box; transition: 0.3s; font-family: -apple-system, sans-serif; }
+        body, html { margin:0; padding:0; height:100%; background: url('https://w.wallhaven.cc/full/ex/wallhaven-ex96pw.png') center/cover; color: var(--text); overflow: hidden; }
 
-        /* Screens */
-        .screen { display:none; height:100vh; width:100vw; }
-        .active-screen { display:flex; animation: slideUp 0.5s ease; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+        /* Экраны */
+        .screen { display: none; height: 100vh; width: 100vw; }
+        .active-screen { display: flex; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
 
-        /* Auth */
-        #auth-screen { justify-content:center; align-items:center; backdrop-filter: blur(50px); }
-        .auth-card { background:var(--glass); padding:35px; border-radius:30px; width:340px; text-align:center; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
-        
-        /* Layout */
-        .app-container { display:flex; height:100%; width:100%; }
-        .sidebar { width:350px; background:var(--glass); backdrop-filter:var(--bg-blur); border-right:1px solid rgba(125,125,125,0.2); display:flex; flex-direction:column; z-index:10; }
-        .chat-area { flex:1; display:flex; flex-direction:column; position:relative; z-index:1; }
+        /* Вход */
+        #auth-screen { justify-content: center; align-items: center; backdrop-filter: blur(50px); }
+        .auth-card { background: var(--glass); padding: 40px; border-radius: 35px; width: 340px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
 
-        /* UI Elements */
-        .avatar { width:55px; height:55px; border-radius:50%; background:var(--ios-blue); display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px; font-weight:bold; background-size:cover; background-position:center; flex-shrink:0; }
-        .ios-input { background:var(--secondary); border:none; border-radius:12px; padding:12px 15px; width:100%; outline:none; color:var(--text); font-size:16px; margin-bottom:10px; }
-        .btn { border:none; border-radius:12px; padding:12px; font-weight:600; cursor:pointer; background:var(--ios-blue); color:white; }
-        .btn-ghost { background:var(--secondary); color:var(--text); }
+        /* Основной интерфейс */
+        .app-container { display: flex; width: 100%; height: 100%; }
+        .sidebar { width: 320px; background: var(--glass); backdrop-filter: blur(30px); border-right: 0.5px solid rgba(125,125,125,0.3); display: flex; flex-direction: column; }
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: rgba(0,0,0,0.05); }
 
-        /* Lists */
-        .list-item { padding:15px; display:flex; align-items:center; gap:15px; cursor:pointer; border-radius:15px; margin:0 10px; }
-        .list-item:hover { background:var(--secondary); }
+        /* Кнопки и инпуты */
+        .ios-input { background: rgba(125,125,125,0.15); border: none; border-radius: 12px; padding: 12px; width: 100%; color: var(--text); margin-bottom: 10px; outline: none; }
+        .btn { background: var(--ios-blue); color: white; border: none; border-radius: 12px; padding: 12px; cursor: pointer; font-weight: bold; width: 100%; }
+        .btn-ghost { background: rgba(125,125,125,0.1); color: var(--text); margin-bottom: 5px; }
+
+        /* Список чатов */
+        .list-item { padding: 12px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-radius: 15px; margin: 2px 8px; }
+        .list-item:hover { background: rgba(125,125,125,0.1); }
         .active-chat { background: var(--ios-blue) !important; color: white !important; }
 
-        /* Messages */
-        #box { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:8px; }
-        .msg { max-width:75%; padding:10px 15px; border-radius:18px; line-height:1.4; font-size:15px; position:relative; }
-        .m-in { background:var(--secondary); align-self:flex-start; border-bottom-left-radius:4px; }
-        .m-out { background:var(--ios-blue); align-self:flex-end; color:white; border-bottom-right-radius:4px; }
+        /* Сообщения */
+        .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { max-width: 75%; padding: 10px 15px; border-radius: 20px; position: relative; cursor: pointer; line-height: 1.4; }
+        .m-in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .m-out { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
 
-        /* Modals */
-        .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(15px); }
-        .modal-content { background:var(--glass); padding:30px; border-radius:30px; width:360px; max-height:90vh; overflow-y:auto; }
+        .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--ios-blue); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; background-size: cover; background-position: center; flex-shrink: 0; }
+        
+        /* Модалки */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 999; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .modal-card { background: var(--glass); padding: 30px; border-radius: 30px; width: 350px; text-align: center; }
 
-        /* Badges */
-        .nft-badge { background: linear-gradient(135deg, #ffd700, #ffa500); color: #000; padding: 4px 10px; border-radius: 10px; font-size: 12px; font-weight: bold; display: inline-block; margin: 3px; }
+        .react-badge { position: absolute; bottom: -8px; right: 10px; background: white; color: black; border-radius: 10px; padding: 1px 6px; font-size: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
-    <div id="auth-screen" class="screen">
+    <div id="auth-screen" class="screen active-screen">
         <div class="auth-card">
-            <h1 style="margin-top:0;">Broke Pro</h1>
-            <p style="opacity:0.6;">The best code.</p>
-            <input type="text" id="login-user" placeholder="Логин" class="ios-input">
-            <input type="password" id="login-pass" placeholder="Пароль" class="ios-input">
-            <button onclick="handleAuth()" class="btn" style="width:100%;">Войти или Регистрация</button>
+            <h1 style="margin:0;">Broke Pro</h1>
+            <p style="opacity:0.5; margin-bottom:20px;">This is the best code.</p>
+            <input type="text" id="auth-user" placeholder="Логин" class="ios-input">
+            <input type="password" id="auth-pass" placeholder="Пароль" class="ios-input">
+            <button onclick="login()" class="btn">Войти / Регистрация</button>
         </div>
     </div>
 
-    <div id="main-screen" class="screen app-container">
+    <div id="app-screen" class="screen app-container">
         <div class="sidebar">
-            <div style="padding:50px 20px 20px; cursor:pointer;" onclick="openProfile('me')">
+            <div style="padding:50px 20px 20px; cursor:pointer;" onclick="openMyProfile()">
                 <div style="display:flex; align-items:center; gap:15px;">
-                    <div id="ui-my-av" class="avatar"></div>
+                    <div id="my-av-ui" class="avatar"></div>
                     <div>
-                        <h3 id="ui-my-name" style="margin:0;">User</h3>
-                        <small id="ui-my-user" style="opacity:0.5;">@username</small>
+                        <strong id="my-name-ui" style="font-size:18px;">Имя</strong><br>
+                        <small id="my-user-ui" style="opacity:0.5;">@username</small>
                     </div>
                 </div>
             </div>
 
-            <div style="padding:0 20px 10px;">
-                <input type="text" placeholder="Поиск @user или канала..." class="ios-input" onkeyup="if(event.key==='Enter') startChat(this.value)">
+            <div style="padding: 10px 15px;">
+                <input type="text" placeholder="Поиск @user или канала..." class="ios-input" onkeyup="if(event.key==='Enter') searchStart(this.value)">
+                <button onclick="openChannelCreator()" class="btn btn-ghost" style="font-size:14px;">➕ Создать канал</button>
             </div>
 
-            <div style="padding:0 20px; display:flex; gap:10px; margin-bottom:15px;">
-                <button onclick="toggleTheme()" class="btn-ghost btn" style="flex:1;">🌓 Тема</button>
-                <button onclick="openChannelCreator()" class="btn-ghost btn" style="flex:1;">📣 Канал</button>
-            </div>
+            <div style="padding:0 15px 10px;"><small style="font-weight:bold; opacity:0.4;">МОИ ЧАТЫ И КАНАЛЫ</small></div>
+            <div id="chat-list" style="flex:1; overflow-y:auto;"></div>
 
-            <div style="padding:0 20px 10px;"><small style="font-weight:bold; opacity:0.5;">МОИ ЧАТЫ И КАНАЛЫ</small></div>
-            <div id="chats-list" style="flex:1; overflow-y:auto;">
-                </div>
-            
-            <button onclick="checkAdmin()" style="margin:20px; opacity:0.2; background:none; border:none; color:var(--text);">Админ панель</button>
+            <div style="padding:15px; border-top:0.5px solid rgba(125,125,125,0.2);">
+                <button onclick="toggleTheme()" class="btn btn-ghost">🌓 Сменить тему</button>
+                <button onclick="openAdmin()" class="btn btn-ghost" style="opacity:0.5;">🛠 Админ панель</button>
+            </div>
         </div>
 
         <div class="chat-area">
-            <div id="chat-header" style="padding:15px 25px; background:var(--glass); backdrop-filter:var(--bg-blur); border-bottom:1px solid rgba(125,125,125,0.2); display:none; align-items:center; gap:15px;">
-                <div id="ui-chat-av" class="avatar" style="width:40px; height:40px;"></div>
-                <strong id="ui-chat-name">Выберите чат</strong>
+            <div id="chat-header" style="display:none; padding:15px 25px; background:var(--glass); backdrop-filter:blur(20px); align-items:center; gap:15px; border-bottom:0.5px solid rgba(125,125,125,0.2);">
+                <div id="header-av" class="avatar" style="width:40px; height:40px;"></div>
+                <strong id="header-name">Чат</strong>
             </div>
             
-            <div id="box">
+            <div id="msg-box" class="messages">
                 <center style="margin-top:100px; opacity:0.3;">
-                    <h2 style="margin:0;">Broke</h2>
-                    <p>Найдите кого-нибудь, чтобы начать общение</p>
+                    <h2>Broke Messenger</h2>
+                    <p>Начните поиск, чтобы создать чат</p>
                 </center>
             </div>
 
-            <div id="input-row" style="padding:20px 30px 40px; display:none; gap:12px; background:var(--glass);">
-                <input type="text" id="msg-input" class="ios-input" style="margin:0;" placeholder="Сообщение...">
-                <button onclick="sendMsg()" class="btn" style="border-radius:50%; width:45px; height:45px; padding:0;">⬆</button>
+            <div id="input-row" style="display:none; padding:20px; background:var(--glass); gap:10px;">
+                <input type="text" id="m-text" class="ios-input" style="margin:0;" placeholder="Сообщение...">
+                <button onclick="sendMsg()" class="btn" style="width:50px; border-radius:50%;">⬆</button>
             </div>
         </div>
     </div>
 
     <div id="modal-profile" class="modal" onclick="closeModals()">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <center>
-                <div id="p-av" class="avatar" style="width:100px; height:100px; font-size:40px; margin-bottom:15px;"></div>
-                <h2 id="p-name-title" style="margin:0;">Имя Фамилия</h2>
-                <p id="p-user-title" style="color:var(--ios-blue); margin-top:5px;"></p>
-            </center>
-            <div style="margin-top:20px;">
-                <label><small>Имя:</small></label>
-                <input type="text" id="edit-name" class="ios-input">
-                <label><small>Юзернейм:</small></label>
-                <input type="text" id="edit-user" class="ios-input">
-                <label><small>О себе:</small></label>
-                <textarea id="edit-bio" class="ios-input" style="height:80px;"></textarea>
-                <label><small>Аватар (URL):</small></label>
-                <input type="text" id="edit-av" class="ios-input">
-                <p><small>Номер: <span id="p-phone"></span></small></p>
-                <div id="p-nfts"></div>
-                <button onclick="saveProfile()" class="btn" style="width:100%; margin-top:15px;">Сохранить изменения</button>
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div id="p-av" class="avatar" style="width:100px; height:100px; margin:0 auto 15px; font-size:40px;"></div>
+            <h2 id="p-name-top" style="margin:0;"></h2>
+            <p id="p-user-top" style="color:var(--ios-blue); margin:5px 0 15px;"></p>
+            
+            <div id="edit-fields">
+                <input type="text" id="ed-name" placeholder="Имя" class="ios-input">
+                <input type="text" id="ed-user" placeholder="Юзернейм" class="ios-input">
+                <input type="text" id="ed-bio" placeholder="Описание" class="ios-input">
+                <input type="text" id="ed-av" placeholder="URL аватара" class="ios-input">
+                <p style="text-align:left; font-size:14px;"><b>Номер:</b> <span id="p-phone"></span></p>
+                <div id="p-nfts" style="text-align:left; margin-bottom:15px;"></div>
+                <button onclick="saveProfile()" class="btn">Сохранить</button>
             </div>
         </div>
     </div>
 
     <div id="modal-channel" class="modal" onclick="closeModals()">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <h3>Создать канал</h3>
-            <input type="text" id="ch-name" placeholder="Название канала" class="ios-input">
-            <input type="text" id="ch-user" placeholder="@username_канала" class="ios-input">
-            <input type="text" id="ch-av" placeholder="URL аватара канала" class="ios-input">
-            <button onclick="createChannel()" class="btn" style="width:100%;">Создать</button>
+        <div class="modal-content modal-card" onclick="event.stopPropagation()">
+            <h3>Новый канал</h3>
+            <input type="text" id="c-name" placeholder="Название канала" class="ios-input">
+            <input type="text" id="c-user" placeholder="@username_канала" class="ios-input">
+            <input type="text" id="c-av" placeholder="URL аватара" class="ios-input">
+            <button onclick="createChannel()" class="btn">Создать канал</button>
         </div>
     </div>
 
     <div id="modal-admin" class="modal" onclick="closeModals()">
-        <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-card" onclick="event.stopPropagation()">
             <h3>Админ Панель</h3>
-            <p><small>Выберите объект для действий:</small></p>
-            <select id="adm-target" class="ios-input"></select>
-            <button onclick="admAction('nft')" class="btn-ghost btn" style="width:100%; margin-bottom:10px;">💎 Выдать NFT подарок</button>
-            <button onclick="admAction('boost')" class="btn-ghost btn" style="width:100%;">📈 Накрутить участников</button>
+            <select id="adm-select" class="ios-input"></select>
+            <button onclick="admAddNFT()" class="btn btn-ghost">💎 Выдать NFT</button>
+            <button onclick="admBoost()" class="btn btn-ghost">📈 Накрутить участников</button>
+            <button onclick="closeModals()" class="btn" style="margin-top:10px; background:#888;">Закрыть</button>
         </div>
+    </div>
+
+    <div id="reaction-picker" style="display:none; position:absolute; z-index:2000; background:var(--glass); padding:10px; border-radius:20px; gap:10px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        <span onclick="addReaction('👍')" style="cursor:pointer; font-size:24px;">👍</span>
+        <span onclick="addReaction('❤️')" style="cursor:pointer; font-size:24px;">❤️</span>
+        <span onclick="addReaction('🔥')" style="cursor:pointer; font-size:24px;">🔥</span>
     </div>
 
     <script>
         const socket = io();
-        let db = JSON.parse(localStorage.getItem('broke_pro_v1')) || null;
-        let activeID = null; 
+        let db = JSON.parse(localStorage.getItem('broke_v10')) || null;
+        let activeID = null;
         let history = JSON.parse(localStorage.getItem('broke_history')) || [];
+        let lastClickedMsg = null;
 
-        // Auth Logic
-        function handleAuth() {
-            const user = document.getElementById('login-user').value.trim();
-            const pass = document.getElementById('login-pass').value.trim();
-            if(!user || !pass) return alert("Введите данные");
+        window.onload = () => { if(db) startApp(); };
 
-            // Имитация БД: если paramov/565811 - это админ
+        function login() {
+            const user = document.getElementById('auth-user').value.trim();
+            const pass = document.getElementById('auth-pass').value.trim();
+            if(!user || !pass) return alert("Заполните поля");
+
             if(user === "paramov" && pass === "565811") {
-                loginAs({ username: "@paramov", name: "Admin", isAdmin: true });
+                db = { username: "@paramov", name: "Admin", isAdmin: true };
             } else {
-                loginAs({ username: "@" + user, name: user });
+                db = { username: "@"+user, name: user, isAdmin: false };
             }
+            db.bio = "Broke User"; db.avatar = ""; db.nfts = []; db.isDark = false;
+            db.phone = "+7 " + Math.floor(Math.random()*9000000000 + 1000000000);
+            save(); startApp();
         }
 
-        function loginAs(data) {
-            if(!db || db.username !== data.username) {
-                db = {
-                    ...data,
-                    bio: "Broke User",
-                    avatar: "",
-                    phone: "+7 " + Math.floor(Math.random()*9e9 + 1e9),
-                    nfts: [],
-                    isDark: false,
-                    channels: []
-                };
-            }
-            save();
-            initApp();
-        }
+        function save() { localStorage.setItem('broke_v10', JSON.stringify(db)); }
+        function saveHist() { localStorage.setItem('broke_history', JSON.stringify(history)); }
 
-        function save() { localStorage.setItem('broke_pro_v1', JSON.stringify(db)); }
-        function saveHistory() { localStorage.setItem('broke_history', JSON.stringify(history)); }
-
-        function initApp() {
+        function startApp() {
             document.getElementById('auth-screen').classList.remove('active-screen');
-            document.getElementById('main-screen').classList.add('active-screen');
+            document.getElementById('app-screen').classList.add('active-screen');
             if(db.isDark) document.body.classList.add('dark-mode');
-            updateUI();
-            renderHistory();
+            updateUI(); renderList();
             socket.emit('online', db.username);
         }
 
         function updateUI() {
-            document.getElementById('ui-my-name').innerText = db.name;
-            document.getElementById('ui-my-user').innerText = db.username;
-            const av = document.getElementById('ui-my-av');
-            if(db.avatar) av.style.backgroundImage = `url(${db.avatar})`;
-            else av.innerText = db.name[0];
+            document.getElementById('my-name-ui').innerText = db.name;
+            document.getElementById('my-user-ui').innerText = db.username;
+            const av = document.getElementById('my-av-ui');
+            if(db.avatar) { av.style.backgroundImage = `url(${db.avatar})`; av.innerText = ''; }
+            else { av.innerText = db.name[0]; av.style.backgroundImage = 'none'; }
         }
 
-        // Profile Logic
-        function openProfile(who) {
-            document.getElementById('modal-profile').style.display = 'flex';
-            document.getElementById('edit-name').value = db.name;
-            document.getElementById('edit-user').value = db.username;
-            document.getElementById('edit-bio').value = db.bio;
-            document.getElementById('edit-av').value = db.avatar;
-            document.getElementById('p-phone').innerText = db.phone;
-            document.getElementById('p-name-title').innerText = db.name;
-            document.getElementById('p-user-title').innerText = db.username;
-            
-            const pav = document.getElementById('p-av');
-            if(db.avatar) pav.style.backgroundImage = `url(${db.avatar})`;
-            else pav.innerText = db.name[0];
-
-            document.getElementById('p-nfts').innerHTML = db.nfts.map(n => `<div class="nft-badge">💎 ${n}</div>`).join('');
-        }
-
-        function saveProfile() {
-            db.name = document.getElementById('edit-name').value;
-            db.username = document.getElementById('edit-user').value;
-            db.bio = document.getElementById('edit-bio').value;
-            db.avatar = document.getElementById('edit-av').value;
-            save(); updateUI(); closeModals();
-        }
-
-        // Channels
-        function openChannelCreator() { document.getElementById('modal-channel').style.display = 'flex'; }
-        
-        function createChannel() {
-            const name = document.getElementById('ch-name').value;
-            const user = document.getElementById('ch-user').value;
-            const av = document.getElementById('ch-av').value;
-            if(!name || !user) return;
-
-            const ch = { id: Date.now(), name, username: user, avatar: av, isChannel: true, subs: 0 };
-            db.channels.push(ch);
-            history.push(ch);
-            save(); saveHistory(); renderHistory(); closeModals();
-        }
-
-        // Chatting
-        function startChat(target) {
-            if(!target) return;
-            activeID = target.startsWith('@') ? target : '@' + target;
-            const existing = history.find(h => h.username === activeID);
-            if(!existing) {
+        function searchStart(val) {
+            if(!val) return;
+            activeID = val.startsWith('@') ? val : '@'+val;
+            if(!history.find(h => h.username === activeID)) {
                 history.push({ username: activeID, name: activeID.replace('@',''), isChannel: false });
-                saveHistory();
+                saveHist();
             }
-            renderHistory();
-            openChatUI(activeID);
+            openChat(activeID);
         }
 
-        function openChatUI(id) {
+        function openChat(id) {
             activeID = id;
             const chat = history.find(h => h.username === id);
             document.getElementById('chat-header').style.display = 'flex';
             document.getElementById('input-row').style.display = 'flex';
-            document.getElementById('ui-chat-name').innerText = chat.name + (chat.isChannel ? ` (${chat.subs} сабов)` : '');
-            document.getElementById('box').innerHTML = "";
-            
-            const av = document.getElementById('ui-chat-av');
-            if(chat.avatar) av.style.backgroundImage = `url(${chat.avatar})`;
-            else { av.style.backgroundImage = 'none'; av.innerText = chat.name[0]; }
-            
-            renderHistory(); // update selection
+            document.getElementById('header-name').innerText = chat.name + (chat.isChannel ? ` (${chat.subs || 0} сабов)` : '');
+            const hav = document.getElementById('header-av');
+            if(chat.avatar) { hav.style.backgroundImage = `url(${chat.avatar})`; hav.innerText = ''; }
+            else { hav.innerText = chat.name[0]; hav.style.backgroundImage = 'none'; }
+            document.getElementById('msg-box').innerHTML = "";
+            renderList();
         }
 
-        function renderHistory() {
-            const list = document.getElementById('chats-list');
+        function renderList() {
+            const list = document.getElementById('chat-list');
             list.innerHTML = history.map(h => `
-                <div class="list-item ${activeID === h.username ? 'active-chat' : ''}" onclick="openChatUI('${h.username}')">
-                    <div class="avatar" style="width:45px; height:45px; ${h.avatar ? `background-image:url(${h.avatar})` : ''}">${h.avatar ? '' : h.name[0]}</div>
+                <div class="list-item ${activeID === h.username ? 'active-chat' : ''}" onclick="openChat('${h.username}')">
+                    <div class="avatar" style="width:40px; height:40px; ${h.avatar ? `background-image:url(${h.avatar})` : ''}">${h.avatar ? '' : h.name[0]}</div>
                     <div>
-                        <div style="font-weight:600;">${h.isChannel ? '📣 ' : ''}${h.name}</div>
-                        <small style="opacity:0.7;">${h.username}</small>
+                        <div style="font-weight:bold;">${h.isChannel ? '📣 ' : ''}${h.name}</div>
+                        <small style="opacity:0.6;">${h.username}</small>
                     </div>
                 </div>
             `).join('');
         }
 
         function sendMsg() {
-            const inp = document.getElementById('msg-input');
+            const inp = document.getElementById('m-text');
             if(!inp.value || !activeID) return;
             const chat = history.find(h => h.username === activeID);
+            if(chat.isChannel && !db.isAdmin && activeID !== db.username) return alert("Только владелец пишет в канал");
             
-            if(chat.isChannel && activeID !== db.username && !db.isAdmin) {
-                return alert("Только владельцы могут писать в канал");
-            }
-
-            renderMsg(inp.value, 'm-out');
+            appendMsg(inp.value, 'm-out');
             socket.emit('private_msg', { to: activeID, from: db.username, text: inp.value });
             inp.value = "";
         }
 
-        socket.on('receive_msg', d => {
-            if(d.to === activeID || d.from === activeID) renderMsg(d.text, 'm-in');
-        });
+        socket.on('receive_msg', d => { if(d.from === activeID) appendMsg(d.text, 'm-in'); });
 
-        function renderMsg(t, c) {
+        function appendMsg(t, c) {
             const d = document.createElement('div');
-            d.className = 'msg ' + c;
-            d.innerText = t;
-            document.getElementById('box').appendChild(d);
-            document.getElementById('box').scrollTop = 99999;
+            d.className = 'msg ' + c; d.innerText = t;
+            d.onclick = (e) => {
+                lastClickedMsg = d;
+                const menu = document.getElementById('reaction-picker');
+                menu.style.display = 'flex';
+                menu.style.top = e.pageY + 'px'; menu.style.left = e.pageX + 'px';
+                e.stopPropagation();
+            };
+            document.getElementById('msg-box').appendChild(d);
+            document.getElementById('msg-box').scrollTop = 99999;
         }
 
-        // Admin
-        function checkAdmin() {
-            if(db.isAdmin) {
-                const sel = document.getElementById('adm-target');
-                sel.innerHTML = history.map(h => `<option value="${h.username}">${h.name} (${h.username})</option>`).join('');
-                document.getElementById('modal-admin').style.display = 'flex';
-            } else {
-                alert("Доступ запрещен");
-            }
+        function addReaction(emoji) {
+            let b = lastClickedMsg.querySelector('.react-badge') || document.createElement('span');
+            b.className = 'react-badge'; b.innerText = emoji;
+            lastClickedMsg.appendChild(b);
+            document.getElementById('reaction-picker').style.display = 'none';
         }
 
-        function admAction(type) {
-            const targetUser = document.getElementById('adm-target').value;
-            const targetObj = history.find(h => h.username === targetUser);
-
-            if(type === 'nft') {
-                const n = prompt("Название NFT:");
-                if(n && targetUser === db.username) { db.nfts.push(n); save(); }
-                else { alert("NFT выдано (визуально)"); }
-            } else {
-                const count = prompt("Сколько накрутить?");
-                if(targetObj && targetObj.isChannel) {
-                    targetObj.subs += parseInt(count);
-                    saveHistory(); renderHistory(); openChatUI(targetUser);
-                } else { alert("Можно крутить только каналам"); }
-            }
+        function openMyProfile() {
+            document.getElementById('modal-profile').style.display = 'flex';
+            document.getElementById('p-name-top').innerText = db.name;
+            document.getElementById('p-user-top').innerText = db.username;
+            document.getElementById('ed-name').value = db.name;
+            document.getElementById('ed-user').value = db.username;
+            document.getElementById('ed-bio').value = db.bio;
+            document.getElementById('ed-av').value = db.avatar;
+            document.getElementById('p-phone').innerText = db.phone;
+            const pav = document.getElementById('p-av');
+            if(db.avatar) { pav.style.backgroundImage = `url(${db.avatar})`; pav.innerText = ''; }
+            else { pav.innerText = db.name[0]; pav.style.backgroundImage = 'none'; }
+            document.getElementById('p-nfts').innerHTML = db.nfts.map(n => `<span style="background:gold; color:black; padding:2px 8px; border-radius:10px; font-size:12px; margin-right:5px;">💎 ${n}</span>`).join('');
         }
 
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-            db.isDark = document.body.classList.contains('dark-mode');
-            save();
+        function saveProfile() {
+            db.name = document.getElementById('ed-name').value;
+            db.username = document.getElementById('ed-user').value;
+            db.bio = document.getElementById('ed-bio').value;
+            db.avatar = document.getElementById('ed-av').value;
+            save(); updateUI(); closeModals();
         }
 
-        function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+        function openChannelCreator() { document.getElementById('modal-channel').style.display = 'flex'; }
+        function createChannel() {
+            const n = document.getElementById('c-name').value;
+            const u = document.getElementById('c-user').value;
+            const a = document.getElementById('c-av').value;
+            if(!n || !u) return;
+            const ch = { username: u.startsWith('@')?u:'@'+u, name: n, avatar: a, isChannel: true, subs: 0 };
+            history.push(ch); saveHist(); renderList(); closeModals();
+        }
+
+        function openAdmin() {
+            if(!db.isAdmin) return alert("Нет прав");
+            const sel = document.getElementById('adm-select');
+            sel.innerHTML = history.map(h => `<option value="${h.username}">${h.name}</option>`).join('');
+            document.getElementById('modal-admin').style.display = 'flex';
+        }
+
+        function admAddNFT() {
+            const target = document.getElementById('adm-select').value;
+            const nft = prompt("Название NFT:");
+            if(nft && target === db.username) { db.nfts.push(nft); save(); alert("Готово!"); }
+            else alert("NFT выдано визуально для " + target);
+        }
+
+        function admBoost() {
+            const target = document.getElementById('adm-select').value;
+            const count = prompt("Сколько участников накрутить?");
+            const obj = history.find(h => h.username === target);
+            if(obj && obj.isChannel) { obj.subs += parseInt(count); saveHist(); renderList(); alert("Накручено!"); }
+            else alert("Накрутка только для каналов");
+        }
+
+        function toggleTheme() { document.body.classList.toggle('dark-mode'); db.isDark = !db.isDark; save(); }
+        function closeModals() { 
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+            document.getElementById('reaction-picker').style.display = 'none';
+        }
+        document.addEventListener('click', () => document.getElementById('reaction-picker').style.display = 'none');
     </script>
 </body>
 </html>
