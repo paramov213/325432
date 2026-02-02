@@ -9,17 +9,18 @@ const io = new Server(server, {
     cors: { origin: "*" }
 });
 
-// Раздача статики
-app.use(express.static(path.join(__dirname)));
+// Указываем путь к статике явно
+const publicPath = path.join(__dirname);
+app.use(express.static(publicPath));
 
 // Главная страница
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(publicPath, 'index.html'));
 });
 
-// ИСПРАВЛЕНИЕ NOT FOUND: Если путь не найден, отдаем index.html
+// ЛОВУШКА ДЛЯ NOT FOUND: если любой другой путь — отдаем index.html
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(publicPath, 'index.html'));
 });
 
 let onlineUsers = {};
@@ -27,7 +28,7 @@ let onlineUsers = {};
 io.on('connection', (socket) => {
     socket.on('online', (username) => {
         onlineUsers[username] = socket.id;
-        console.log(`Пользователь ${username} подключен`);
+        console.log(`User ${username} connected`);
     });
 
     socket.on('private_msg', (data) => {
@@ -46,5 +47,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Сервер Broke запущен на порту ${PORT}`);
+    console.log(`Broke Messenger server is running on port ${PORT}`);
 });
