@@ -5,64 +5,70 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
-
-let bannedIPs = new Set();
-
-// ИСПРАВЛЕНИЕ: Теперь сервер ищет файлы в текущей папке, а не в 'public'
-app.use(express.static(__dirname));
-
-// Явный маршрут для главной страницы, чтобы точно не было ошибки "Cannot GET /"
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+const io = new Server(server, {
+    cors: { origin: "*" }
 });
 
+// Раздача файлов
+app.use(express.static(__dirname));
+
+// Хранилище онлайн-статусов
+const onlineUsers = new Map();
+
 io.on('connection', (socket) => {
-    const clientIP = socket.handshake.address;
-    // Проверка бана
-    if (bannedIPs.has(clientIP)) return socket.disconnect();
+    console.log('User connected:', socket.id);
 
+    // Когда юзер заходит в сеть
     socket.on('online', (username) => {
+        if (!username) return;
         socket.username = username;
-        io.emit('user_status', { username, status: 'online' });
+        onlineUsers.set(username, socket.id);
+        
+        // Оповещаем всех, что юзер в сети
+        io.emit('user_status', { username: username, status: 'online' });
     });
 
-    socket.on('typing', (data) => {
-        socket.broadcast.emit('user_typing', data);
-    });
-
+    // Личные сообщения
     socket.on('private_msg', (data) => {
-        socket.broadcast.emit('receive_msg', data);
+        const targetSocketId = onlineUsers.get(data.to);
+        if (targetSocketId) {
+            // Отправляем конкретному получателю
+            io.to(targetSocketId).emit('receive_msg', data);
+        }
+        // Если это системный бот, сервер может логировать или обрабатывать это тут
     });
 
-    // Редактирование
-    socket.on('edit_msg', (data) => {
-        socket.broadcast.emit('msg_edited', data);
+    // Индикатор печати
+    socket.on('typing', (data) => {
+        const targetSocketId = onlineUsers.get(data.to);
+        if (targetSocketId) {
+            io.to(targetSocketId).emit('display_typing', { from: data.from });
+        }
     });
 
-    // Удаление
-    socket.on('delete_msg', (data) => {
-        socket.broadcast.emit('msg_deleted', data);
-    });
-
+    // Обновление профиля (рассылка всем)
     socket.on('update_profile_broadcast', (userData) => {
+        // Рассылаем обновленные данные всем клиентам, чтобы у них обновилась история
         socket.broadcast.emit('user_profile_updated', userData);
     });
 
-    socket.on('adm_kick_request', (target) => {
-        io.emit('kick_signal', target.toLowerCase());
-    });
-
-    socket.on('adm_ban_ip', (target) => {
-        bannedIPs.add(clientIP); 
-        io.emit('kick_signal', target.toLowerCase());
-    });
-
+    // Отключение
     socket.on('disconnect', () => {
         if (socket.username) {
+            onlineUsers.delete(socket.username);
             io.emit('user_status', { username: socket.username, status: 'offline' });
+            console.log(`User ${socket.username} disconnected`);
         }
     });
 });
 
-server.listen(3000, () => console.log(`TeleClone Server Running on port 3000`));
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`
+    ======================================
+    🚀 Broke Pro Max Server Started!
+    📍 Port: ${PORT}
+    🛠 Status: Working Perfectly
+    ======================================
+    `);
+});
