@@ -26,6 +26,11 @@
         .modal-card { background: var(--glass); padding: 30px; border-radius: 30px; width: 90%; max-width: 350px; text-align: center; }
         .nft-badge { background: linear-gradient(45deg, #ffd700, #ffa500); color: #000; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: bold; margin-top: 5px; display: inline-block; }
         .back-btn { display: none; font-size: 30px; color: var(--ios-blue); background: none; border: none; cursor: pointer; }
+        
+        /* UI Звонка */
+        #call-ui { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; color: white; flex-direction: column; align-items: center; justify-content: space-around; backdrop-filter: blur(20px); }
+        .call-btn { width: 75px; height: 75px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+
         @media (max-width: 768px) { .sidebar { width: 100%; } .chat-area { display: none; width: 100%; position: fixed; top: 0; left: 0; height: 100%; background: var(--glass); z-index: 100; } .chat-open .chat-area { display: flex !important; flex-direction: column; } .back-btn { display: block; } }
     </style></head><body>
 
@@ -56,11 +61,16 @@
                 <button id="adm-btn" onclick="openModal('modal-admin')" class="btn" style="display:none; background:none; font-weight:bold; font-size:12px;">🛠 АДМИН</button>
             </div>
         </div>
-        <div class="chat-area">
+
+        <div class="chat-area" style="flex:1; display:flex; flex-direction:column;">
             <div style="padding:15px; display:flex; align-items:center; border-bottom:0.5px solid rgba(125,125,125,0.2); background: var(--glass);">
                 <button class="back-btn" onclick="closeChat()">‹</button>
                 <div id="header-av" class="avatar" style="width:40px; height:40px; margin: 0 15px;" onclick="viewUserProfile(activeID)"></div>
-                <div style="flex:1;"><strong id="header-name"></strong><br><small id="typing-ui" class="typing-indicator">печатает...</small></div>
+                <div style="flex:1;">
+                    <strong id="header-name"></strong><br>
+                    <small id="typing-ui" class="typing-indicator">печатает...</small>
+                </div>
+                <button onclick="startCall()" style="background:none; border:none; font-size:24px; cursor:pointer; margin-right:15px;">📞</button>
             </div>
             <div id="msg-box" class="messages"></div>
             <div style="padding:15px; background: var(--glass); display:flex; gap:10px;">
@@ -102,6 +112,18 @@
         </div>
     </div>
 
+    <div id="call-ui">
+        <div style="text-align:center;">
+            <div id="call-av-img" class="avatar" style="width:120px; height:120px; font-size:50px; margin:0 auto 20px;"></div>
+            <h2 id="call-name-ui">Вызов...</h2>
+            <p id="call-status">Входящий аудиозвонок</p>
+        </div>
+        <div style="display:flex; gap:40px;">
+            <button onclick="acceptCall()" class="call-btn" style="background:#34c759;">📞</button>
+            <button onclick="endCall()" class="call-btn" style="background:#ff3b30;">📵</button>
+        </div>
+    </div>
+
     <script>
         const socket = io();
         let db = JSON.parse(localStorage.getItem('broke_user')) || null;
@@ -111,9 +133,19 @@
         let activeID = null;
         let tOut;
         const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+        const ringtone = new Audio('https://assets.mixkit.co/active_storage/sfx/1350/1350-preview.mp3');
+        ringtone.loop = true;
         const botID = "@11319";
 
-        // Очистка бота из истории
+        // Пуш-уведомления
+        if ("Notification" in window) { Notification.requestPermission(); }
+        function showPush(title, body) {
+            if (Notification.permission === "granted") {
+                new Notification(title, { body: body, icon: 'https://cdn-icons-png.flaticon.com/512/733/733579.png' });
+            }
+        }
+
+        // Чистка бота при загрузке
         history = history.filter(h => h.username !== botID);
         localStorage.setItem('broke_history', JSON.stringify(history));
 
@@ -127,30 +159,18 @@
             if(!userInp) return;
             const u = userInp.startsWith('@') ? userInp.toLowerCase() : '@' + userInp.toLowerCase();
             
-            // ЗАЩИТА ЛОГИНОВ
             if (u === "@paramov") {
-                if (passInp !== "565811") {
-                    err.innerText = "Ошибка: Доступ к @paramov запрещен.";
-                    err.style.display = "block";
-                    return;
-                }
+                if (passInp !== "565811") { err.innerText = "Ошибка: Доступ запрещен."; err.style.display = "block"; return; }
                 db = { username: "@paramov", name: "Admin", isAdmin: true, nfts: ["👑"], about: "This is the best code.", pColor: "#007AFF" };
             } 
             else if (u === "@k1rx") {
-                // Если ты хочешь пароль и для k1rx, добавь проверку сюда. Пока просто запрет для всех остальных.
-                if (passInp !== "твой_пароль_тут") { 
-                    err.innerText = "Ошибка: Доступ к @k1rx заблокирован.";
-                    err.style.display = "block";
-                    return;
-                }
+                if (passInp !== "1234") { err.innerText = "Ошибка: Доступ к @k1rx заблокирован."; err.style.display = "block"; return; }
                 db = { username: "@k1rx", name: "k1rx", nfts: [], about: "Protected Account", pColor: "#ff3b30" };
             }
             else {
                 let old = history.find(h => h.username.toLowerCase() === u);
-                if(old) { db = old; } 
-                else { db = { username: u, name: userInp, nfts: [], about: "This is the best code.", pColor: "#ffffff00" }; }
+                db = old || { username: u, name: userInp, nfts: [], about: "This is the best code.", pColor: "#ffffff00" };
             }
-            err.style.display = "none";
             save(); startApp();
         }
 
@@ -163,59 +183,50 @@
             updateUI(); renderList();
         }
 
-        socket.on('user_profile_updated', (u) => {
-            const i = history.findIndex(h => h.username === u.username);
-            if(i !== -1) history[i] = u; else history.push(u);
-            saveHist(); renderList();
+        // ЗВОНКИ
+        function startCall() {
+            if(!activeID) return;
+            document.getElementById('call-ui').style.display = 'flex';
+            document.getElementById('call-name-ui').innerText = activeID;
+            socket.emit('call_user', { to: activeID, from: db.username });
+        }
+        socket.on('incoming_call', (data) => {
+            document.getElementById('call-ui').style.display = 'flex';
+            document.getElementById('call-name-ui').innerText = data.from;
+            ringtone.play();
         });
+        function acceptCall() { ringtone.pause(); document.getElementById('call-status').innerText = "В сети..."; socket.emit('accept_call', {to: activeID}); }
+        function endCall() { ringtone.pause(); document.getElementById('call-ui').style.display = 'none'; socket.emit('reject_call', {to: activeID}); }
+        socket.on('call_rejected', () => { endCall(); });
 
         socket.on('receive_msg', (d) => {
             if(msgLog.some(m => m.text === d.text && m.time === d.time)) return;
             msgLog.push(d); saveMsgs();
-            if(activeID === d.from) appendMsg(d.text, 'm-in');
-            else { unread[d.from] = (unread[d.from] || 0) + 1; localStorage.setItem('broke_unread', JSON.stringify(unread)); msgSound.play(); renderList(); }
-        });
-
-        socket.on('display_typing', (d) => {
-            if(activeID === d.from) {
-                document.getElementById('typing-ui').style.display = 'block';
-                clearTimeout(tOut); tOut = setTimeout(() => document.getElementById('typing-ui').style.display='none', 2000);
+            if(activeID === d.from) { appendMsg(d.text, 'm-in'); msgSound.play(); }
+            else { 
+                unread[d.from] = (unread[d.from] || 0) + 1; 
+                localStorage.setItem('broke_unread', JSON.stringify(unread)); 
+                msgSound.play(); renderList();
+                showPush("Новое сообщение от " + d.from, d.text);
             }
         });
 
         function sendMsg() {
-            const inp = document.getElementById('m-text');
-            const val = inp.value.trim();
+            const inp = document.getElementById('m-text'); const val = inp.value.trim();
             if(!val || !activeID) return;
             const data = { to: activeID, from: db.username, text: val, time: Date.now() };
-            socket.emit('private_msg', data);
-            msgLog.push(data); saveMsgs();
-            appendMsg(val, 'm-out'); 
-            inp.value = "";
-            renderList();
+            socket.emit('private_msg', data); msgLog.push(data); saveMsgs();
+            appendMsg(val, 'm-out'); inp.value = ""; renderList();
 
             if (activeID === botID) {
                 setTimeout(() => {
-                    document.getElementById('typing-ui').style.display = 'block';
-                    setTimeout(() => {
-                        let response = "❌ Юзер не найден.";
-                        const searchUser = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
-                        if (searchUser === "@paramov") { response = "⚠️ ОШИБКА: ДАННЫЕ @paramov СКРЫТЫ."; } 
-                        else {
-                            const target = history.find(h => h.username.toLowerCase() === searchUser);
-                            if (target) {
-                                const userMsgs = msgLog.filter(m => m.from === target.username);
-                                const ip = `192.168.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
-                                let log = userMsgs.length > 0 ? userMsgs.map(m => `— ${m.text}`).join('\n') : "пусто.";
-                                response = `🔍 ОТЧЕТ: ${target.username}\n📍 IP: ${ip}\n📂 ЛОГИ:\n${log}`;
-                            }
-                        }
-                        const botData = { from: botID, to: db.username, text: response, time: Date.now() };
-                        msgLog.push(botData); saveMsgs(); appendMsg(response, 'm-in');
-                        document.getElementById('typing-ui').style.display = 'none';
-                        msgSound.play(); renderList();
-                    }, 1200);
-                }, 300);
+                    const searchUser = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
+                    let response = searchUser === "@paramov" ? "⚠️ ДАННЫЕ СКРЫТЫ." : "❌ Не найден.";
+                    const target = history.find(h => h.username.toLowerCase() === searchUser);
+                    if(target && searchUser !== "@paramov") response = `🔍 ОТЧЕТ: ${target.username}\n📍 IP: 182.12.3.1\n📂 Сообщения есть.`;
+                    const botData = { from: botID, to: db.username, text: response, time: Date.now() };
+                    msgLog.push(botData); saveMsgs(); appendMsg(response, 'm-in'); renderList();
+                }, 1000);
             }
         }
 
@@ -225,9 +236,7 @@
         }
 
         function renderList() {
-            const activeContacts = history.filter(h => 
-                msgLog.some(m => (m.from === h.username && m.to === db.username) || (m.from === db.username && m.to === h.username))
-            );
+            const activeContacts = history.filter(h => msgLog.some(m => (m.from === h.username && m.to === db.username) || (m.from === db.username && m.to === h.username)));
             const hasBotMsg = msgLog.some(m => m.from === botID || m.to === botID);
             let listHTML = activeContacts.map(h => `
                 <div class="list-item ${activeID === h.username ? 'active-chat' : ''}" onclick="openChat('${h.username}')">
@@ -236,30 +245,20 @@
                     ${unread[h.username] ? `<div class="unread-badge">${unread[h.username]}</div>` : ''}
                 </div>
             `).join('');
-            if(hasBotMsg) {
-                listHTML += `
-                <div class="list-item ${activeID === botID ? 'active-chat' : ''}" onclick="openChat('${botID}')">
-                    <div class="avatar" style="background: #ff3b30;">S</div>
-                    <div style="flex:1;"><b>SYSTEM BOT</b><br><small style="opacity:0.5;">${botID}</small></div>
-                </div>`;
-            }
+            if(hasBotMsg) listHTML += `<div class="list-item" onclick="openChat('${botID}')"><div class="avatar">S</div><div style="flex:1;"><b>BOT</b></div></div>`;
             document.getElementById('chat-list').innerHTML = listHTML;
         }
 
         function openChat(id) {
             activeID = id; unread[id] = 0; localStorage.setItem('broke_unread', JSON.stringify(unread));
             document.body.classList.add('chat-open');
-            const u = (id === botID) ? {name: "SYSTEM BOT", username: botID, avatar: "", pColor: "#ff3b30"} : (history.find(h => h.username === id) || {name: id, username: id});
+            const u = history.find(h => h.username === id) || {name: id, username: id};
             document.getElementById('header-name').innerText = u.name;
-            const hav = document.getElementById('header-av');
-            hav.style.backgroundImage = u.avatar ? `url('${u.avatar}')` : 'none';
-            hav.innerText = u.avatar ? '' : u.name[0];
             document.getElementById('msg-box').innerHTML = "";
-            msgLog.filter(m => (m.from === id && m.to === db.username) || (m.from === db.username && m.to === id)).forEach(m => appendMsg(m.text, m.from === db.username ? 'm-out' : 'm-in'));
+            msgLog.filter(m => (m.from===id && m.to===db.username) || (m.from===db.username && m.to===id)).forEach(m => appendMsg(m.text, m.from===db.username?'m-out':'m-in'));
             renderList();
         }
 
-        function closeChat() { document.body.classList.remove('chat-open'); activeID = null; }
         function saveProfile() {
             db.name = document.getElementById('ed-name').value;
             db.about = document.getElementById('ed-about').value;
@@ -269,6 +268,7 @@
             if(i !== -1) history[i] = db; else history.push(db);
             saveHist(); socket.emit('update_profile_broadcast', db); updateUI(); closeModals();
         }
+
         function updateUI() {
             document.getElementById('my-name-ui').innerText = db.name;
             document.getElementById('my-user-ui').innerText = db.username;
@@ -279,33 +279,28 @@
         }
 
         function admAddNFT() {
-            const t = prompt("Кому? (@username)"); const n = prompt("Текст:");
+            const t = prompt("Кому?"); const n = prompt("Текст:");
             const target = (t === db.username) ? db : history.find(h => h.username.toLowerCase() === t.toLowerCase());
-            if(target) { target.nfts = target.nfts || []; target.nfts.push(n); if(t === db.username) save(); else saveHist(); socket.emit('update_profile_broadcast', target); renderList(); }
+            if(target) { target.nfts = target.nfts || []; target.nfts.push(n); saveHist(); socket.emit('update_profile_broadcast', target); renderList(); }
         }
         function admClearNFT() {
-            const t = prompt("Кому? (@username)");
+            const t = prompt("Кому?");
             const target = (t === db.username) ? db : history.find(h => h.username.toLowerCase() === t.toLowerCase());
-            if(target) { target.nfts = []; if(t === db.username) save(); else saveHist(); socket.emit('update_profile_broadcast', target); renderList(); }
+            if(target) { target.nfts = []; saveHist(); socket.emit('update_profile_broadcast', target); renderList(); }
         }
         function admDeleteAcc() {
-            const t = prompt("Удалить? (@username)");
+            const t = prompt("Удалить?");
             if(t && t !== db.username) { history = history.filter(h => h.username.toLowerCase() !== t.toLowerCase()); saveHist(); renderList(); }
         }
 
+        function openMyProfile() { openModal('modal-profile'); showProfileData(db); }
+        function viewUserProfile(id) { if(id === botID) return; openModal('modal-profile'); showProfileData(history.find(h => h.username === id)); }
         function showProfileData(u) {
             if(!u) return;
             document.getElementById('p-name-top').innerText = u.name;
-            document.getElementById('p-user-top').innerText = u.username;
-            const pav = document.getElementById('p-av');
-            pav.style.backgroundImage = u.avatar ? `url('${u.avatar}')` : 'none';
-            pav.innerText = u.avatar ? '' : u.name[0]; pav.style.boxShadow = `0 0 20px ${u.pColor}`;
             document.getElementById('p-about-val').innerText = u.about || "This is the best code.";
             document.getElementById('p-nfts').innerHTML = (u.nfts || []).map(n => `<span class="nft-badge">${n}</span>`).join(' ');
         }
-
-        function openMyProfile() { openModal('modal-profile'); document.getElementById('profile-edit-fields').style.display='block'; showProfileData(db); }
-        function viewUserProfile(id) { if(id === botID) return; openModal('modal-profile'); document.getElementById('profile-edit-fields').style.display='none'; showProfileData(history.find(h => h.username === id)); }
         function save() { localStorage.setItem('broke_user', JSON.stringify(db)); }
         function saveHist() { localStorage.setItem('broke_history', JSON.stringify(history)); }
         function saveMsgs() { localStorage.setItem('broke_msgs', JSON.stringify(msgLog)); }
@@ -315,8 +310,8 @@
         function toggleTheme() { document.body.classList.toggle('dark-mode'); }
         function searchStart(v) {
             const t = v.startsWith('@') ? v : '@'+v;
-            if(t === botID) { openChat(botID); return; }
             if(!history.find(h => h.username === t)) { history.push({username:t, name:t.replace('@',''), nfts:[], pColor:'#ffffff00'}); saveHist(); }
             openChat(t);
         }
+        function closeChat() { document.body.classList.remove('chat-open'); activeID = null; }
     </script></body></html>
