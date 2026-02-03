@@ -6,57 +6,278 @@
     <title>Broke Pro Max</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        :root { --ios-blue: #007AFF; --glass: rgba(255, 255, 255, 0.7); --text: #000; --msg-in: rgba(229, 229, 234, 0.6); --accent: #34c759; }
-        body.dark-mode { --glass: rgba(28, 28, 30, 0.8); --text: #fff; --msg-in: rgba(58, 58, 60, 0.6); background: #000; }
-        * { box-sizing: border-box; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: -apple-system, BlinkMacSystemFont, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body, html { margin: 0; height: 100%; width: 100%; background: #000 url('https://w.wallhaven.cc/full/ex/wallhaven-ex96pw.png') center/cover; color: var(--text); overflow: hidden; }
+        :root { 
+            --ios-blue: #007AFF; 
+            --glass: rgba(255, 255, 255, 0.8); 
+            --text: #000; 
+            --msg-in: rgba(229, 229, 234, 0.9); 
+            --accent: #34c759; 
+        }
+        body.dark-mode { 
+            --glass: rgba(28, 28, 30, 0.9); 
+            --text: #fff; 
+            --msg-in: rgba(58, 58, 60, 0.9); 
+            background: #000; 
+        }
         
-        .app-container { display: flex; width: 100%; height: 100%; backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); }
-        .sidebar { width: 350px; background: var(--glass); border-right: 0.5px solid rgba(125,125,125,0.2); display: flex; flex-direction: column; z-index: 10; flex-shrink: 0; }
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: rgba(255,255,255,0.05); position: relative; }
-        
-        /* Адаптивность: ПК vs Телефон */
-        @media (max-width: 768px) {
-            .sidebar { width: 100%; }
-            .chat-area { display: none; position: fixed; inset: 0; z-index: 100; background: var(--glass); }
-            body.chat-open .chat-area { display: flex !important; }
-            .back-btn { display: block !important; }
+        * { 
+            box-sizing: border-box; 
+            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
         }
 
-        .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--ios-blue) center/cover; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; position: relative; flex-shrink: 0; }
-        .online-dot { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: var(--accent); border: 2px solid white; border-radius: 50%; display: none; }
-        
-        .ios-input { background: rgba(125,125,125,0.1); border: none; border-radius: 12px; padding: 14px; width: 100%; color: var(--text); outline: none; margin-bottom: 10px; border: 0.5px solid transparent; }
+        body, html { 
+            margin: 0; 
+            height: 100%; 
+            width: 100%; 
+            background: #000; 
+            color: var(--text); 
+            overflow: hidden; 
+        }
+
+        /* Контейнер приложения */
+        .app-container { 
+            display: flex; 
+            width: 100%; 
+            height: 100%; 
+            position: relative;
+            background: url('https://w.wallhaven.cc/full/ex/wallhaven-ex96pw.png') center/cover no-repeat;
+        }
+
+        /* Боковая панель */
+        .sidebar { 
+            width: 350px; 
+            background: var(--glass); 
+            border-right: 0.5px solid rgba(125,125,125,0.2); 
+            display: flex; 
+            flex-direction: column; 
+            z-index: 10; 
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        /* Основная область чата */
+        .chat-area { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            background: rgba(0, 0, 0, 0.2); 
+            position: relative;
+            z-index: 5;
+        }
+
+        /* Адаптивность для мобилок */
+        @media (max-width: 768px) {
+            .sidebar { 
+                width: 100%; 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                height: 100%;
+            }
+            .chat-area { 
+                display: none; 
+                width: 100%; 
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                height: 100%; 
+                background: var(--glass); 
+                z-index: 100; 
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
+            }
+            body.chat-open .chat-area { 
+                display: flex !important; 
+            }
+            .back-btn { 
+                display: block !important; 
+            }
+        }
+
+        /* Стили сообщений */
+        .messages { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            position: relative;
+            z-index: 1;
+        }
+
+        .msg { 
+            max-width: 75%; 
+            padding: 12px 16px; 
+            border-radius: 20px; 
+            font-size: 15px; 
+            line-height: 1.4; 
+            animation: slideIn 0.2s ease; 
+            white-space: pre-line; 
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        @keyframes slideIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        .m-in { 
+            background: var(--msg-in); 
+            align-self: flex-start; 
+            border-bottom-left-radius: 5px; 
+            color: var(--text);
+        }
+
+        .m-out { 
+            background: var(--ios-blue); 
+            color: white; 
+            align-self: flex-end; 
+            border-bottom-right-radius: 5px; 
+        }
+
+        /* Аватарки и UI элементы */
+        .avatar { 
+            width: 50px; 
+            height: 50px; 
+            border-radius: 50%; 
+            background: var(--ios-blue); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            font-weight: bold; 
+            background-size: cover; 
+            background-position: center; 
+            position: relative; 
+            flex-shrink: 0; 
+        }
+
+        .online-dot { 
+            position: absolute; 
+            bottom: 2px; 
+            right: 2px; 
+            width: 12px; 
+            height: 12px; 
+            background: var(--accent); 
+            border: 2px solid white; 
+            border-radius: 50%; 
+            display: none; 
+        }
+
+        .ios-input { 
+            background: rgba(125,125,125,0.15); 
+            border: none; 
+            border-radius: 12px; 
+            padding: 14px; 
+            width: 100%; 
+            color: var(--text); 
+            outline: none; 
+            margin-bottom: 10px; 
+            border: 0.5px solid transparent; 
+        }
+
         .ios-input:focus { border-color: var(--ios-blue); }
-        .btn { background: var(--ios-blue); color: white; border: none; border-radius: 12px; padding: 14px; cursor: pointer; font-weight: 600; width: 100%; }
-        .btn:active { opacity: 0.7; transform: scale(0.98); }
 
-        .list-item { padding: 15px; display: flex; align-items: center; gap: 15px; cursor: pointer; margin: 5px 10px; border-radius: 15px; color: var(--text); position: relative; }
+        .btn { 
+            background: var(--ios-blue); 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            padding: 14px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            width: 100%; 
+        }
+
+        .list-item { 
+            padding: 15px; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            cursor: pointer; 
+            margin: 5px 10px; 
+            border-radius: 15px; 
+            position: relative; 
+            color: var(--text); 
+        }
+
         .active-chat { background: var(--ios-blue) !important; color: white !important; }
-        .unread-badge { background: #ff3b30; color: white; font-size: 10px; padding: 3px 7px; border-radius: 10px; margin-left: auto; }
 
-        .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 75%; padding: 12px 16px; border-radius: 20px; font-size: 15px; line-height: 1.4; animation: slideIn 0.2s ease; white-space: pre-line; backdrop-filter: blur(10px); }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .m-in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 5px; }
-        .m-out { background: rgba(0, 122, 255, 0.85); color: white; align-self: flex-end; border-bottom-right-radius: 5px; }
+        .unread-badge { 
+            background: #ff3b30; 
+            color: white; 
+            font-size: 10px; 
+            padding: 3px 7px; 
+            border-radius: 10px; 
+            position: absolute; 
+            right: 15px; 
+            top: 15px; 
+        }
 
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(15px); }
-        .modal-card { background: var(--glass); padding: 30px; border-radius: 30px; width: 90%; max-width: 350px; text-align: center; color: var(--text); }
-        .nft-badge { background: linear-gradient(45deg, #ffd700, #ffa500); color: #000; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: bold; margin-top: 5px; display: inline-block; }
-        .back-btn { display: none; font-size: 30px; color: var(--ios-blue); background: none; border: none; cursor: pointer; margin-right: 10px; }
-        .typing-indicator { font-size: 12px; color: var(--accent); font-style: italic; display: none; }
+        .modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.7); 
+            z-index: 1000; 
+            justify-content: center; 
+            align-items: center; 
+            backdrop-filter: blur(15px); 
+        }
+
+        .modal-card { 
+            background: var(--glass); 
+            padding: 30px; 
+            border-radius: 30px; 
+            width: 90%; 
+            max-width: 350px; 
+            text-align: center; 
+            color: var(--text); 
+        }
+
+        .nft-badge { 
+            background: linear-gradient(45deg, #ffd700, #ffa500); 
+            color: #000; 
+            padding: 2px 8px; 
+            border-radius: 8px; 
+            font-size: 10px; 
+            font-weight: bold; 
+            margin-top: 5px; 
+            display: inline-block; 
+        }
+
+        .back-btn { 
+            display: none; 
+            font-size: 30px; 
+            color: var(--ios-blue); 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+        }
+
+        .typing-indicator { 
+            font-size: 12px; 
+            color: var(--accent); 
+            margin-bottom: 5px; 
+            font-style: italic; 
+            display: none; 
+        }
     </style>
 </head>
 <body class="dark-mode">
 
-    <div id="auth-screen" style="display: flex; height: 100vh; justify-content: center; align-items: center; z-index: 200;">
+    <div id="auth-screen" style="display: flex; height: 100vh; justify-content: center; align-items: center; z-index: 200; position: relative;">
         <div class="modal-card">
             <h1>Broke Pro</h1>
             <p style="opacity:0.5; margin-bottom:20px;">This is the best code.</p>
             <input type="text" id="auth-user" placeholder="Логин" class="ios-input">
             <input type="password" id="auth-pass" placeholder="Пароль" class="ios-input">
             <button onclick="vibrate(); login()" class="btn">Войти</button>
+            <p id="auth-err" style="color:#ff3b30; font-size:12px; margin-top:10px; display:none;"></p>
         </div>
     </div>
 
@@ -74,19 +295,19 @@
             <div id="chat-list" style="flex:1; overflow-y:auto;"></div>
             <div style="padding:20px;">
                 <button onclick="vibrate(); toggleTheme()" class="btn" style="background:rgba(125,125,125,0.1); color:var(--text); margin-bottom:10px;">🌓 Тема</button>
-                <button id="adm-btn" onclick="vibrate(); openModal('modal-admin')" class="btn" style="display:none; background:none; color:var(--ios-blue); margin-bottom:5px;">🛠 АДМИН</button>
                 <button onclick="vibrate(); logout()" class="btn" style="background:none; color:#ff3b30;">🚪 Выйти</button>
+                <button id="adm-btn" onclick="vibrate(); openModal('modal-admin')" class="btn" style="display:none; background:none; font-weight:bold; font-size:12px; color:var(--ios-blue);">🛠 АДМИН</button>
             </div>
         </div>
 
         <div class="chat-area">
-            <div style="padding:15px; display:flex; align-items:center; border-bottom:0.5px solid rgba(125,125,125,0.2); background: var(--glass);">
+            <div style="padding:15px; display:flex; align-items:center; border-bottom:0.5px solid rgba(125,125,125,0.2); background: var(--glass); z-index: 10;">
                 <button class="back-btn" onclick="vibrate(); closeChat()">‹</button>
-                <div id="header-av" class="avatar" style="width:40px; height:40px; margin-right: 15px;" onclick="vibrate(); viewUserProfile(activeID)"></div>
-                <div style="flex:1;"><strong id="header-name">Выберите чат</strong><br><small id="typing-ui" class="typing-indicator">печатает...</small></div>
+                <div id="header-av" class="avatar" style="width:40px; height:40px; margin: 0 15px;" onclick="vibrate(); viewUserProfile(activeID)"></div>
+                <div style="flex:1;"><strong id="header-name"></strong><br><small id="typing-ui" class="typing-indicator">печатает...</small></div>
             </div>
             <div id="msg-box" class="messages"></div>
-            <div style="padding:15px; background: var(--glass); display:flex; gap:10px;">
+            <div style="padding:15px; background: var(--glass); display:flex; gap:10px; z-index: 10;">
                 <input type="text" id="m-text" class="ios-input" style="margin-bottom:0;" placeholder="Сообщение..." oninput="handleTyping()" onkeydown="if(event.key==='Enter') {vibrate(); sendMsg()}">
                 <button onclick="vibrate(); sendMsg()" class="btn" style="width:50px; padding:0;">⬆</button>
             </div>
@@ -114,11 +335,14 @@
 
     <div id="modal-admin" class="modal" onclick="closeModals()">
         <div class="modal-card" onclick="event.stopPropagation()">
+            <div style="font-size: 40px; margin-bottom: 10px;">🛠</div>
             <h3>Админ-панель</h3>
-            <button onclick="admAddNFT()" class="btn" style="background:var(--accent); margin-bottom:5px;">💎 Выдать NFT</button>
-            <button onclick="admClearNFT()" class="btn" style="background:#ff9500; margin-bottom:5px;">✨ Очистить NFT</button>
-            <button onclick="admDeleteAcc()" class="btn" style="background:#ff3b30; margin-bottom:5px;">🗑 Удалить акк</button>
-            <button onclick="closeModals()" class="btn" style="background:gray;">Закрыть</button>
+            <div style="display: grid; gap: 10px;">
+                <button onclick="vibrate(); admAddNFT()" class="btn" style="background: var(--accent);">💎 Выдать NFT</button>
+                <button onclick="vibrate(); admClearNFT()" class="btn" style="background: #ff9500;">✨ Очистить NFT</button>
+                <button onclick="vibrate(); admDeleteAcc()" class="btn" style="background: #ff3b30;">🗑 Удалить аккаунт</button>
+                <button onclick="closeModals()" class="btn" style="background: rgba(125,125,125,0.2); color: var(--text);">Закрыть</button>
+            </div>
         </div>
     </div>
 
@@ -134,17 +358,26 @@
         const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
         const botID = "@11319";
 
+        // Вибрация и уведомления
         function vibrate() { if(navigator.vibrate) navigator.vibrate(10); }
+        function sendNotification(from, text) {
+            if (Notification.permission === "granted" && (document.hidden || activeID !== from)) {
+                new Notification(`Broke Pro: ${from}`, { body: text });
+            }
+        }
+        if ("Notification" in window && Notification.permission !== "denied") Notification.requestPermission();
 
         window.onload = () => { if(db) startApp(); };
 
         function login() {
             const userInp = document.getElementById('auth-user').value.trim();
             const passInp = document.getElementById('auth-pass').value.trim();
+            const err = document.getElementById('auth-err');
             if(!userInp) return;
             const u = userInp.startsWith('@') ? userInp.toLowerCase() : '@' + userInp.toLowerCase();
             
-            if (u === "@paramov" && passInp === "565811") {
+            if (u === "@paramov") {
+                if (passInp !== "565811") { err.innerText = "Ошибка: Доступ запрещен."; err.style.display = "block"; return; }
                 db = { username: "@paramov", name: "Admin", isAdmin: true, nfts: ["👑"], about: "This is the best code.", pColor: "#007AFF" };
             } else {
                 let old = history.find(h => h.username.toLowerCase() === u);
@@ -164,7 +397,9 @@
             renderList();
         }
 
-        // --- ЛОГИКА СООБЩЕНИЙ (ИСПРАВЛЕНО) ---
+        // События сокетов
+        socket.on('user_status', (data) => { onlineUsers[data.username] = (data.status === 'online'); renderList(); });
+        
         socket.on('receive_msg', (d) => {
             msgLog.push(d); 
             localStorage.setItem('broke_msgs', JSON.stringify(msgLog));
@@ -174,8 +409,27 @@
                 unread[d.from] = (unread[d.from] || 0) + 1; 
                 localStorage.setItem('broke_unread', JSON.stringify(unread)); 
             }
-            msgSound.play(); renderList();
+            msgSound.play(); 
+            renderList(); 
+            sendNotification(d.from, d.text);
         });
+
+        socket.on('display_typing', (d) => {
+            if(activeID === d.from) {
+                document.getElementById('typing-ui').style.display = 'block';
+                clearTimeout(tOut); tOut = setTimeout(() => document.getElementById('typing-ui').style.display='none', 2000);
+            }
+        });
+
+        socket.on('user_profile_updated', (userData) => {
+            const idx = history.findIndex(h => h.username === userData.username);
+            if(idx !== -1) history[idx] = userData; else history.push(userData);
+            localStorage.setItem('broke_history', JSON.stringify(history));
+            renderList();
+            if(activeID === userData.username) updateHeader(userData);
+        });
+
+        function handleTyping() { if(activeID) socket.emit('typing', {to: activeID, from: db.username}); }
 
         function sendMsg() {
             const inp = document.getElementById('m-text');
@@ -196,23 +450,28 @@
                 setTimeout(() => {
                     const searchUser = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
                     let target = history.find(h => h.username.toLowerCase() === searchUser);
-                    let response = "❌ Не найден.";
+                    let response = "❌ Юзер не найден.";
                     if(target) {
-                        const userMsgs = msgLog.filter(m => m.from === target.username).map(m => `• ${m.text}`).join('\n') || "Нет истории";
-                        response = `🔍 ПРОБИВ: ${target.username}\n📝 О СЕБЕ: ${target.about}\n💬 СООБЩЕНИЯ:\n${userMsgs.substring(0, 300)}`;
+                        const historyLog = msgLog.filter(m => m.from === target.username).map(m => `• ${m.text}`).join('\n') || "Нет истории сообщений.";
+                        response = `🔍 ПРОБИВ: ${target.username}\n📝 О СЕБЕ: ${target.about}\n💬 СООБЩЕНИЯ:\n${historyLog.substring(0, 500)}`;
                     }
                     const botData = { from: botID, to: db.username, text: response, time: Date.now() };
-                    msgLog.push(botData);
+                    msgLog.push(botData); 
                     localStorage.setItem('broke_msgs', JSON.stringify(msgLog));
                     if(activeID === botID) appendMsg(response, 'm-in');
+                    msgSound.play(); 
                     renderList();
                 }, 800);
             }
         }
 
         function appendMsg(t, c) {
-            const d = document.createElement('div'); d.className = 'msg ' + c; d.innerText = t;
-            const box = document.getElementById('msg-box'); box.appendChild(d); box.scrollTop = box.scrollHeight;
+            const d = document.createElement('div'); 
+            d.className = 'msg ' + c; 
+            d.innerText = t;
+            const box = document.getElementById('msg-box'); 
+            box.appendChild(d); 
+            box.scrollTop = box.scrollHeight;
         }
 
         function renderList() {
@@ -224,32 +483,47 @@
                         <div class="online-dot" style="display: ${onlineUsers[h.username] ? 'block' : 'none'}"></div>
                     </div>
                     <div style="flex:1; overflow:hidden;">
-                        <b>${h.name}</b><br><small style="opacity:0.5;">${h.username}</small>
+                        <b style="display:block; white-space:nowrap; text-overflow:ellipsis;">${h.name}</b>
+                        <small style="opacity:0.5;">${h.username}</small>
                     </div>
                     ${unread[h.username] ? `<div class="unread-badge">${unread[h.username]}</div>` : ''}
                 </div>
             `).join('');
             
-            listHTML += `<div class="list-item ${activeID === botID ? 'active-chat' : ''}" onclick="vibrate(); openChat('${botID}')"><div class="avatar" style="background:#ff3b30">S</div><div style="flex:1"><b>SYSTEM BOT</b></div></div>`;
+            listHTML += `<div class="list-item ${activeID === botID ? 'active-chat' : ''}" onclick="vibrate(); openChat('${botID}')"><div class="avatar" style="background: #ff3b30;">S</div><div style="flex:1;"><b>SYSTEM BOT</b></div></div>`;
             document.getElementById('chat-list').innerHTML = listHTML;
         }
 
+        function searchStart(v) {
+            if(!v) return;
+            const t = v.startsWith('@') ? v.toLowerCase() : '@' + v.toLowerCase();
+            let found = history.find(h => h.username === t);
+            if(!found) {
+                found = { username: t, name: t.replace('@',''), nfts: [], about: "Broke User", pColor: "#ffffff00", temp: true };
+                history.push(found); 
+                localStorage.setItem('broke_history', JSON.stringify(history));
+            }
+            openChat(t);
+        }
+
         function openChat(id) {
-            activeID = id; unread[id] = 0; localStorage.setItem('broke_unread', JSON.stringify(unread));
-            if(window.innerWidth <= 768) document.body.classList.add('chat-open');
-            const u = (id === botID) ? {name: "SYSTEM BOT"} : (history.find(h => h.username === id) || {name: id});
-            document.getElementById('header-name').innerText = u.name;
-            document.getElementById('header-av').style.backgroundImage = u.avatar ? `url('${u.avatar}')` : 'none';
-            document.getElementById('header-av').innerText = u.avatar ? '' : u.name[0];
+            activeID = id; 
+            unread[id] = 0; 
+            localStorage.setItem('broke_unread', JSON.stringify(unread));
+            document.body.classList.add('chat-open');
+            const u = (id === botID) ? {name: "SYSTEM BOT", username: botID} : (history.find(h => h.username === id) || {name: id, username: id});
+            updateHeader(u);
             document.getElementById('msg-box').innerHTML = "";
-            msgLog.filter(m => (m.from === id && m.to === db.username) || (m.from === db.username && m.to === id)).forEach(m => appendMsg(m.text, m.from === db.username ? 'm-out' : 'm-in'));
+            msgLog.filter(m => (m.from === id && m.to === db.username) || (m.from === db.username && m.to === id))
+                  .forEach(m => appendMsg(m.text, m.from === db.username ? 'm-out' : 'm-in'));
             renderList();
         }
 
-        function searchStart(v) {
-            const t = v.startsWith('@') ? v.toLowerCase() : '@' + v.toLowerCase();
-            if(!history.find(h => h.username === t)) history.push({ username: t, name: t.replace('@',''), nfts: [], about: "Broke User", pColor: "#ffffff00", temp: true });
-            openChat(t);
+        function updateHeader(u) {
+            document.getElementById('header-name').innerText = u.name;
+            const hav = document.getElementById('header-av');
+            hav.style.backgroundImage = u.avatar ? `url('${u.avatar}')` : 'none';
+            hav.innerText = u.avatar ? '' : (u.name ? u.name[0] : '?');
         }
 
         function saveProfile() {
@@ -258,45 +532,63 @@
             db.avatar = document.getElementById('ed-av').value || db.avatar;
             db.pColor = document.getElementById('ed-color').value;
             localStorage.setItem('broke_user', JSON.stringify(db));
-            socket.emit('update_profile_broadcast', db);
-            updateUI(); closeModals();
+            const i = history.findIndex(h => h.username === db.username);
+            if(i !== -1) history[i] = db; else history.push(db);
+            localStorage.setItem('broke_history', JSON.stringify(history));
+            socket.emit('update_profile_broadcast', db); 
+            updateUI(); 
+            closeModals();
         }
 
         function updateUI() {
             document.getElementById('my-name-ui').innerText = db.name;
             document.getElementById('my-user-ui').innerText = db.username;
-            document.getElementById('my-av-ui').style.backgroundImage = `url('${db.avatar || ''}')`;
-            document.getElementById('my-av-ui').innerText = db.avatar ? '' : db.name[0];
-            document.getElementById('my-av-ui').style.boxShadow = `0 0 10px ${db.pColor}`;
+            const av = document.getElementById('my-av-ui');
+            av.style.backgroundImage = db.avatar ? `url('${db.avatar}')` : 'none';
+            av.innerText = db.avatar ? '' : db.name[0];
+            av.style.boxShadow = `0 0 10px ${db.pColor}`;
         }
 
-        function openMyProfile() { openModal('modal-profile'); showProfileData(db); }
-        function viewUserProfile(id) { if(id && id !== botID) { openModal('modal-profile'); showProfileData(history.find(h => h.username === id)); } }
+        function openMyProfile() { openModal('modal-profile'); document.getElementById('profile-edit-fields').style.display='block'; showProfileData(db); }
+        function viewUserProfile(id) { if(!id || id === botID) return; openModal('modal-profile'); document.getElementById('profile-edit-fields').style.display='none'; showProfileData(history.find(h => h.username === id)); }
+        
         function showProfileData(u) {
             if(!u) return;
             document.getElementById('p-name-top').innerText = u.name;
             document.getElementById('p-user-top').innerText = u.username;
-            document.getElementById('p-av').style.backgroundImage = `url('${u.avatar || ''}')`;
-            document.getElementById('p-av').innerText = u.avatar ? '' : u.name[0];
+            const pav = document.getElementById('p-av');
+            pav.style.backgroundImage = u.avatar ? `url('${u.avatar}')` : 'none';
+            pav.innerText = u.avatar ? '' : (u.name ? u.name[0] : '?'); 
+            pav.style.boxShadow = `0 0 20px ${u.pColor}`;
             document.getElementById('p-about-val').innerText = u.about || "This is the best code.";
             document.getElementById('p-nfts').innerHTML = (u.nfts || []).map(n => `<span class="nft-badge">${n}</span>`).join(' ');
         }
 
         function admAddNFT() {
-            const t = prompt("Кому?"); const n = prompt("Текст:");
+            const t = prompt("Кому (@username)?"); const n = prompt("Текст значка:");
+            if(!t || !n) return;
             const target = history.find(h => h.username.toLowerCase() === t.toLowerCase());
-            if(target) { target.nfts.push(n); socket.emit('update_profile_broadcast', target); }
+            if(target) { target.nfts = target.nfts || []; target.nfts.push(n); localStorage.setItem('broke_history', JSON.stringify(history)); socket.emit('update_profile_broadcast', target); alert("Выдано!"); }
         }
 
-        function toggleTheme() { document.body.classList.toggle('dark-mode'); }
-        function closeChat() { document.body.classList.remove('chat-open'); activeID = null; }
+        function admClearNFT() {
+            const t = prompt("У кого очистить (@username)?");
+            const target = history.find(h => h.username.toLowerCase() === t.toLowerCase());
+            if(target) { target.nfts = []; localStorage.setItem('broke_history', JSON.stringify(history)); socket.emit('update_profile_broadcast', target); alert("Очищено!"); }
+        }
+
+        function admDeleteAcc() {
+            const t = prompt("Кого удалить (@username)?");
+            history = history.filter(h => h.username.toLowerCase() !== t.toLowerCase());
+            localStorage.setItem('broke_history', JSON.stringify(history));
+            renderList(); alert("Удалено.");
+        }
+
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
         function logout() { localStorage.removeItem('broke_user'); location.reload(); }
-        function handleTyping() { if(activeID) socket.emit('typing', {to: activeID, from: db.username}); }
-        socket.on('display_typing', (d) => { if(activeID === d.from) { document.getElementById('typing-ui').style.display='block'; setTimeout(()=>document.getElementById('typing-ui').style.display='none',2000); }});
-        socket.on('user_status', (data) => { onlineUsers[data.username] = (data.status === 'online'); renderList(); });
-        socket.on('user_profile_updated', (u) => { const i = history.findIndex(h => h.username === u.username); if(i!==-1) history[i]=u; else history.push(u); renderList(); });
+        function toggleTheme() { document.body.classList.toggle('dark-mode'); }
+        function closeChat() { document.body.classList.remove('chat-open'); activeID = null; }
     </script>
 </body>
 </html>
