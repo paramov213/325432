@@ -2,228 +2,214 @@
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>TeleClone Web</title>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
             --bg: #0e1621; --side: #17212b; --acc: #2481cc;
             --msg-out: #2b5278; --msg-in: #182533;
             --text: #fff; --text-sec: #708499;
-            --font: 'Inter', -apple-system, sans-serif;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
-        body.light {
-            --bg: #f4f4f5; --side: #ffffff; --acc: #3390ec;
-            --msg-out: #eeffdb; --msg-in: #ffffff; --text: #000;
-        }
-        * { box-sizing: border-box; font-family: var(--font); margin: 0; padding: 0; }
-        body { background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; }
+        * { box-sizing: border-box; font-family: var(--font); -webkit-tap-highlight-color: transparent; }
+        body, html { margin: 0; height: 100%; width: 100%; background: var(--bg); color: var(--text); overflow: hidden; }
 
-        .app { display: flex; height: 100vh; }
-        
-        /* Sidebar Styles */
-        .sidebar { width: 350px; background: var(--side); border-right: 1px solid rgba(0,0,0,0.2); display: flex; flex-direction: column; }
-        .search-container { padding: 15px; }
-        .tg-input { width: 100%; background: var(--bg); border: 2px solid transparent; border-radius: 12px; padding: 10px 15px; color: var(--text); outline: none; transition: 0.2s; }
-        .tg-input:focus { border-color: var(--acc); }
-
-        .chat-list { flex: 1; overflow-y: auto; }
-        .chat-item { padding: 12px 15px; display: flex; items-center; gap: 12px; cursor: pointer; transition: 0.2s; position: relative; }
-        .chat-item:hover { background: rgba(255,255,255,0.05); }
-        .chat-item.active { background: var(--acc); }
-
-        /* Avatar System */
-        .avatar { width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; position: relative; background-size: cover; }
-        .online-badge { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #4cd964; border: 2px solid var(--side); border-radius: 50%; }
-
-        /* Chat Viewport */
-        .main { flex: 1; display: flex; flex-direction: column; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-blend-mode: overlay; background-color: var(--bg); }
-        .top-bar { height: 60px; background: var(--side); display: flex; align-items: center; padding: 0 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
-        
-        .bubble { max-width: 450px; padding: 8px 12px; border-radius: 15px; font-size: 15px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .bubble.out { align-self: flex-end; background: var(--msg-out); border-bottom-right-radius: 4px; color: white; }
-        .bubble.in { align-self: flex-start; background: var(--msg-in); border-bottom-left-radius: 4px; }
-        .bubble.pulse { animation: flash 1.5s ease; }
-        
-        @keyframes flash { 0% { background: var(--acc); } 100% { background: var(--msg-in); } }
-
-        .input-area { padding: 15px 20px; background: var(--side); display: flex; gap: 10px; align-items: flex-end; }
-        .expanding-input { flex: 1; min-height: 40px; max-height: 200px; background: var(--bg); border-radius: 12px; padding: 10px; outline: none; white-space: pre-wrap; }
-
-        /* Admin / Modal */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .modal-content { background: var(--side); padding: 30px; border-radius: 20px; width: 320px; text-align: center; }
-        .btn { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        
+        /* Эффект Ripple */
         .ripple { position: relative; overflow: hidden; }
-        .ripple-effect { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.3); transform: scale(0); animation: rip 0.6s linear; }
-        @keyframes rip { to { transform: scale(4); opacity: 0; } }
-    </style></head>
-<body class="dark">
-
-<div class="app">
-    <div class="sidebar">
-        <div class="search-container">
-            <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
-                <h2 style="font-size:18px;">TeleClone</h2>
-                <div id="adm-btn" style="display:none; cursor:pointer;" onclick="openModal('admin-modal')">🛠</div>
-            </div>
-            <input type="text" id="search-bar" class="tg-input" placeholder="Search..." onkeyup="if(event.key==='Enter') startSearch(this.value)">
-        </div>
-        <div id="chat-list" class="chat-list"></div>
-        <div style="padding:15px; border-top:1px solid rgba(0,0,0,0.1);">
-            <button onclick="logout()" class="btn" style="background:transparent; color:#ff3b30; border:1px solid #ff3b30;">Logout</button>
-        </div>
-    </div>
-
-    <div class="main">
-        <div class="top-bar">
-            <div id="active-chat-info" style="display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="openProfile()">
-                <div id="top-av" class="avatar" style="width:40px; height:40px; font-size:14px;"></div>
-                <div>
-                    <div id="top-name" style="font-weight:bold;">Select a chat</div>
-                    <div id="top-status" style="font-size:12px; color:var(--text-sec);">offline</div>
-                </div>
-            </div>
-        </div>
-        <div id="msg-box" class="messages"></div>
-        <div class="input-area">
-            <div id="msg-input" class="expanding-input" contenteditable="true" data-placeholder="Write a message..."></div>
-            <button onclick="sendMsg()" class="btn" style="width:40px; height:40px; border-radius:50%; background:var(--acc); margin:0;">⬆</button>
-        </div>
-    </div>
-</div>
-
-<div id="admin-modal" class="modal" onclick="closeModals()">
-    <div class="modal-content" onclick="event.stopPropagation()">
-        <h3>Admin Panel</h3>
-        <input type="text" id="adm-target" class="tg-input" placeholder="@username" style="margin:15px 0;">
-        <button class="btn" style="background:#ff9500; color:white;" onclick="admAction('kick')">Kick Account</button>
-        <button class="btn" style="background:#ff3b30; color:white;" onclick="admAction('ban')">Ban IP</button>
-        <button class="btn" style="background:var(--acc); color:white;" onclick="admAction('nft')">Grant NFT</button>
-    </div>
-</div>
-
-<script>
-    const socket = io();
-    let db = JSON.parse(localStorage.getItem('tele_self')) || null;
-    let chats = JSON.parse(localStorage.getItem('tele_chats_v4')) || [];
-    let msgs = JSON.parse(localStorage.getItem('tele_msgs_v4')) || {};
-    let activeID = null;
-
-    // --- ИНИЦИАЛИЗАЦИЯ ---
-    window.onload = () => {
-        if(!db) {
-            const nick = prompt("Enter @username:");
-            db = { username: nick, name: nick.replace('@',''), isAdmin: nick==='@paramov', nfts: [] };
-            localStorage.setItem('tele_self', JSON.stringify(db));
+        .ripple-element {
+            position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.2);
+            transform: scale(0); animation: ripple-animation 0.6s linear; pointer-events: none;
         }
-        startApp();
-    };
+        @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
 
-    function startApp() {
-        if(db.isAdmin) document.getElementById('adm-btn').style.display='block';
-        socket.emit('online', db.username);
-        socket.emit('update_profile_broadcast', db);
-        renderList();
-    }
+        .app-container { display: flex; width: 100%; height: 100%; }
 
-    // --- ЧАТ И СООБЩЕНИЯ ---
-    function startSearch(val) {
-        const id = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
-        if(!chats.find(c => c.username === id)) {
-            chats.push({ username: id, name: id.replace('@',''), nfts: [] });
-            save();
-        }
-        openChat(id);
-        renderList();
-    }
+        /* Sidebar */
+        .sidebar { width: 350px; background: var(--side); border-right: 1px solid rgba(0,0,0,0.3); display: flex; flex-direction: column; z-index: 10; }
+        .search-area { padding: 15px; }
+        .ios-input { background: var(--bg); border: 2px solid transparent; border-radius: 10px; padding: 12px; width: 100%; color: var(--text); outline: none; font-size: 15px; }
+        .ios-input:focus { border-color: var(--acc); }
 
-    function openChat(id) {
-        activeID = id;
-        const u = chats.find(c => c.username === id);
-        document.getElementById('top-name').innerText = u.name;
-        document.getElementById('top-av').style.background = getGradient(id);
-        document.getElementById('top-av').innerText = u.name[0];
+        /* Chat List */
+        .chat-list { flex: 1; overflow-y: auto; }
+        .list-item { padding: 10px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; margin: 2px 8px; border-radius: 12px; position: relative; transition: 0.2s; }
+        .list-item:hover { background: rgba(255,255,255,0.05); }
+        .active-chat { background: var(--acc) !important; color: white !important; }
         
-        const box = document.getElementById('msg-box');
-        box.innerHTML = '';
-        (msgs[id] || []).forEach(m => appendMsg(m));
-        renderList();
-    }
+        .avatar { width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; flex-shrink: 0; position: relative; background-size: cover; }
+        .online-dot { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #34c759; border: 2px solid var(--side); border-radius: 50%; }
 
-    function sendMsg() {
-        const inp = document.getElementById('msg-input');
-        const text = inp.innerText.trim();
-        if(!text || !activeID) return;
+        /* Chat Area */
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: var(--bg); background-blend-mode: overlay; }
+        .chat-header { height: 60px; background: var(--side); display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid rgba(0,0,0,0.2); cursor: pointer; }
+        
+        .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 4px; }
+        .msg { max-width: 75%; padding: 8px 12px; border-radius: 15px; font-size: 15px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .m-in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .m-out { background: var(--msg-out); align-self: flex-end; border-bottom-right-radius: 4px; }
 
-        const m = { id: Date.now(), from: db.username, to: activeID, text, time: Date.now() };
-        if(!msgs[activeID]) msgs[activeID] = [];
-        msgs[activeID].push(m);
-        socket.emit('private_msg', m);
-        appendMsg(m);
-        inp.innerText = '';
-        save();
-    }
+        .input-bar { padding: 10px 20px; background: var(--side); display: flex; gap: 10px; align-items: flex-end; }
+        .tg-input-box { flex: 1; background: var(--bg); border-radius: 20px; padding: 10px 15px; min-height: 40px; outline: none; }
+        .send-btn { width: 45px; height: 45px; border-radius: 50%; background: var(--acc); color: white; border: none; cursor: pointer; font-size: 20px; }
 
-    socket.on('receive_msg', (d) => {
-        if(!msgs[d.from]) msgs[d.from] = [];
-        msgs[d.from].push(d);
-        if(activeID === d.from) appendMsg(d);
-        if(document.hidden) new Notification("New message from " + d.from, { body: d.text });
-        save();
-        renderList();
-    });
+        /* Modals */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .modal-card { background: var(--side); padding: 30px; border-radius: 25px; width: 350px; text-align: center; }
+        .btn { background: var(--acc); color: white; border: none; border-radius: 12px; padding: 14px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 10px; }
+    </style></head><body>
 
-    function appendMsg(m) {
-        const div = document.createElement('div');
-        div.className = `bubble ${m.from === db.username ? 'out' : 'in'}`;
-        div.innerText = m.text;
-        const box = document.getElementById('msg-box');
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
-    }
+    <div id="auth-screen" style="display: flex; height: 100vh; justify-content: center; align-items: center;">
+        <div class="modal-card">
+            <h1 style="color: var(--acc);">TeleClone</h1>
+            <input type="text" id="auth-user" placeholder="Enter @username" class="ios-input" style="margin-top:20px;">
+            <button onclick="login()" class="btn ripple">Start Messaging</button>
+        </div>
+    </div>
 
-    // --- UI ЭФФЕКТЫ ---
-    function renderList() {
-        const list = document.getElementById('chat-list');
-        list.innerHTML = chats.map(c => `
-            <div class="chat-item ${activeID === c.username ? 'active' : ''}" onclick="openChat('${c.username}')">
-                <div class="avatar" style="background:${getGradient(c.username)}">${c.name[0]}</div>
-                <div style="flex:1">
-                    <div style="font-weight:bold">${c.name} ${c.nfts?.map(n=>'💎').join('') || ''}</div>
-                    <div style="font-size:13px; color:var(--text-sec); opacity:0.8">This is the best code.</div>
+    <div id="app-screen" class="app-container" style="display:none;">
+        <div class="sidebar">
+            <div style="padding:40px 20px 10px;" onclick="openMyProfile()" class="ripple">
+                <div style="display:flex; align-items:center; gap:15px; cursor:pointer;">
+                    <div id="my-av-ui" class="avatar"></div>
+                    <div><strong id="my-name-ui"></strong><br><small id="my-user-ui" style="color: var(--text-sec);"></small></div>
                 </div>
             </div>
-        `).join('');
-    }
+            <div class="search-area"><input type="text" id="search-inp" placeholder="Search" class="ios-input" onkeyup="if(event.key==='Enter') searchStart(this.value)"></div>
+            <div id="chat-list" class="chat-list"></div>
+            <div style="padding:20px; border-top: 1px solid rgba(0,0,0,0.2);">
+                <button id="adm-btn" onclick="openModal('modal-admin')" class="btn ripple" style="display:none; background:none; border:1px solid var(--acc); color:var(--acc);">🛠 ADMIN PANEL</button>
+                <button onclick="logout()" class="btn ripple" style="background:none; color:#ff3b30; border: 1px solid #ff3b30; margin-top:10px;">🚪 Logout</button>
+            </div>
+        </div>
+        <div class="chat-area">
+            <div class="chat-header" onclick="viewUserProfile(activeID)">
+                <div id="header-av" class="avatar" style="width:40px; height:40px; margin-right: 15px;"></div>
+                <div style="flex:1;"><strong id="header-name">Select Chat</strong><br><small id="typing-ui" style="color:var(--acc); display:none;">typing...</small></div>
+            </div>
+            <div id="msg-box" class="messages"></div>
+            <div class="input-bar">
+                <div id="m-text" class="tg-input-box" contenteditable="true"></div>
+                <button onclick="sendMsg()" class="send-btn ripple">⬆</button>
+            </div>
+        </div>
+    </div>
 
-    function getGradient(id) {
-        const colors = [['#ff512f', '#dd2476'], ['#4facfe', '#00f2fe'], ['#667eea', '#764ba2'], ['#11998e', '#38ef7d']];
-        const idx = id.length % colors.length;
-        return `linear-gradient(45deg, ${colors[idx][0]}, ${colors[idx][1]})`;
-    }
+    <div id="modal-admin" class="modal" onclick="closeModals()"><div class="modal-card" onclick="event.stopPropagation()">
+        <h3>Admin Controls</h3>
+        <input type="text" id="adm-target" placeholder="@username" class="ios-input" style="margin-top:15px;">
+        <button onclick="admKick()" class="btn ripple" style="background:#ff9500;">🗑 Kick Account</button>
+        <button onclick="admBanIP()" class="btn ripple" style="background:#ff3b30;">🚫 Ban IP</button>
+        <button onclick="admAddNFT()" class="btn ripple" style="background:#34c759;">💎 Grant NFT</button>
+    </div></div>
 
-    // --- АДМИНКА ---
-    function admAction(type) {
-        const target = document.getElementById('adm-target').value;
-        if(!target) return;
-        if(type === 'kick') socket.emit('adm_kick_request', target);
-        if(type === 'ban') socket.emit('adm_ban_ip', target);
-        if(type === 'nft') {
-            const u = chats.find(c => c.username === target);
-            if(u) { u.nfts.push('💎'); socket.emit('update_profile_broadcast', u); }
+    <script>
+        const socket = io();
+        let db = JSON.parse(localStorage.getItem('tele_user')) || null;
+        let history = JSON.parse(localStorage.getItem('tele_history')) || [];
+        let msgLog = JSON.parse(localStorage.getItem('tele_msgs')) || [];
+        let onlineUsers = {}, activeID = null;
+
+        // Эффект Ripple
+        document.addEventListener('click', e => {
+            const target = e.target.closest('.ripple');
+            if (!target) return;
+            const rect = target.getBoundingClientRect();
+            const circle = document.createElement('span');
+            const diameter = Math.max(rect.width, rect.height);
+            circle.style.width = circle.style.height = `${diameter}px`;
+            circle.style.left = `${e.clientX - rect.left - diameter / 2}px`;
+            circle.style.top = `${e.clientY - rect.top - diameter / 2}px`;
+            circle.classList.add('ripple-element');
+            target.appendChild(circle);
+            setTimeout(() => circle.remove(), 600);
+        });
+
+        window.onload = () => { if(db) startApp(); };
+
+        function login() {
+            const u = document.getElementById('auth-user').value.trim();
+            if(!u) return;
+            const nick = u.startsWith('@') ? u.toLowerCase() : '@'+u.toLowerCase();
+            db = {username:nick, name:nick.replace('@',''), isAdmin:nick==='@paramov', nfts:[], pColor:'#2481cc'};
+            localStorage.setItem('tele_user', JSON.stringify(db)); startApp();
         }
-        closeModals();
-    }
 
-    socket.on('kick_signal', (t) => { if(db.username === t) logout(); });
+        function startApp() {
+            document.getElementById('auth-screen').style.display='none';
+            document.getElementById('app-screen').style.display='flex';
+            if(db.isAdmin) document.getElementById('adm-btn').style.display='block';
+            socket.emit('online', db.username);
+            socket.emit('update_profile_broadcast', db);
+            updateUI(); renderList();
+        }
 
-    function logout() { localStorage.clear(); location.reload(); }
-    function save() { 
-        localStorage.setItem('tele_chats_v4', JSON.stringify(chats));
-        localStorage.setItem('tele_msgs_v4', JSON.stringify(msgs));
-    }
-    function openModal(id) { document.getElementById(id).style.display='flex'; }
-    function closeModals() { document.querySelectorAll('.modal').forEach(m=>m.style.display='none'); }
-</script>
-</body></html>
+        function searchStart(v) {
+            const t = v.startsWith('@') ? v.toLowerCase() : '@'+v.toLowerCase();
+            if(!history.find(h => h.username === t)) history.push({ username: t, name: t.replace('@',''), nfts: [] });
+            openChat(t); renderList();
+        }
+
+        function openChat(id) {
+            activeID = id;
+            const u = history.find(h => h.username === id) || {name: id};
+            document.getElementById('header-name').innerText = u.name;
+            const hav = document.getElementById('header-av');
+            hav.style.background = getGradient(id); hav.innerText = u.name[0];
+            document.getElementById('msg-box').innerHTML = '';
+            msgLog.filter(m => (m.from===id && m.to===db.username) || (m.from===db.username && m.to===id))
+                  .forEach(m => appendMsg(m));
+            renderList();
+        }
+
+        function sendMsg() {
+            const txt = document.getElementById('m-text').innerText.trim();
+            if(!txt || !activeID) return;
+            const d = {to:activeID, from:db.username, text:txt, time:Date.now()};
+            socket.emit('private_msg', d); msgLog.push(d); save(); appendMsg(d);
+            document.getElementById('m-text').innerText = '';
+        }
+
+        function appendMsg(m) {
+            const div = document.createElement('div');
+            div.className = `msg ${m.from === db.username ? 'm-out' : 'm-in'}`;
+            div.innerText = m.text;
+            const box = document.getElementById('msg-box');
+            box.appendChild(div); box.scrollTop = box.scrollHeight;
+        }
+
+        socket.on('receive_msg', d => {
+            msgLog.push(d); save();
+            if(activeID === d.from) appendMsg(d);
+            renderList();
+        });
+
+        function getGradient(id) {
+            const colors = [['#ff512f', '#dd2476'], ['#4facfe', '#00f2fe'], ['#667eea', '#764ba2']];
+            const idx = Math.abs(id.split('').reduce((a,b)=>a+b.charCodeAt(0),0)) % colors.length;
+            return `linear-gradient(45deg, ${colors[idx][0]}, ${colors[idx][1]})`;
+        }
+
+        function renderList() {
+            document.getElementById('chat-list').innerHTML = history.filter(h => h.username !== db.username).map(h => `
+                <div class="list-item ripple ${activeID === h.username ? 'active-chat' : ''}" onclick="openChat('${h.username}')">
+                    <div class="avatar" style="background: ${getGradient(h.username)}">${h.name[0]}</div>
+                    <div style="flex:1"><b>${h.name}</b><br><small style="opacity:0.6">This is the best code.</small></div>
+                </div>
+            `).join('');
+        }
+
+        function updateUI() {
+            document.getElementById('my-name-ui').innerText = db.name;
+            document.getElementById('my-user-ui').innerText = db.username;
+            document.getElementById('my-av-ui').style.background = getGradient(db.username);
+            document.getElementById('my-av-ui').innerText = db.name[0];
+        }
+
+        function admKick() { socket.emit('adm_kick_request', document.getElementById('adm-target').value); closeModals(); }
+        function admBanIP() { socket.emit('adm_ban_ip', document.getElementById('adm-target').value); closeModals(); }
+        function save() { 
+            localStorage.setItem('tele_history', JSON.stringify(history)); 
+            localStorage.setItem('tele_msgs', JSON.stringify(msgLog)); 
+        }
+        function openModal(id) { document.getElementById(id).style.display='flex'; }
+        function closeModals() { document.querySelectorAll('.modal').forEach(m=>m.style.display='none'); }
+        function logout() { localStorage.clear(); location.reload(); }
+    </script></body></html>
