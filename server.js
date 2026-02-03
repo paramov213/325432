@@ -9,10 +9,17 @@ const io = new Server(server);
 
 let bannedIPs = new Set();
 
-app.use(express.static(path.join(__dirname, 'public')));
+// ИСПРАВЛЕНИЕ: Теперь сервер ищет файлы в текущей папке, а не в 'public'
+app.use(express.static(__dirname));
+
+// Явный маршрут для главной страницы, чтобы точно не было ошибки "Cannot GET /"
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 io.on('connection', (socket) => {
     const clientIP = socket.handshake.address;
+    // Проверка бана
     if (bannedIPs.has(clientIP)) return socket.disconnect();
 
     socket.on('online', (username) => {
@@ -28,12 +35,12 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('receive_msg', data);
     });
 
-    // Новое: Редактирование сообщения
+    // Редактирование
     socket.on('edit_msg', (data) => {
         socket.broadcast.emit('msg_edited', data);
     });
 
-    // Новое: Удаление сообщения
+    // Удаление
     socket.on('delete_msg', (data) => {
         socket.broadcast.emit('msg_deleted', data);
     });
@@ -58,4 +65,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(3000, () => console.log(`TeleClone Ultimate: 3000`));
+server.listen(3000, () => console.log(`TeleClone Server Running on port 3000`));
