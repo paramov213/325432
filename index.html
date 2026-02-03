@@ -1,64 +1,86 @@
 <!DOCTYPE html><html lang="ru"><head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>TeleClone Web</title>
+    <title>TeleClone Ultimate</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
             --bg: #0e1621; --side: #17212b; --acc: #2481cc;
             --msg-out: #2b5278; --msg-in: #182533;
             --text: #fff; --text-sec: #708499;
-            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --menu-bg: rgba(23, 33, 43, 0.95);
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
-        * { box-sizing: border-box; font-family: var(--font); -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; font-family: var(--font); outline: none; -webkit-tap-highlight-color: transparent; }
         body, html { margin: 0; height: 100%; width: 100%; background: var(--bg); color: var(--text); overflow: hidden; }
 
-        /* Эффект Ripple */
+        /* Ripple Effect */
         .ripple { position: relative; overflow: hidden; }
-        .ripple-element {
-            position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.2);
-            transform: scale(0); animation: ripple-animation 0.6s linear; pointer-events: none;
-        }
+        .ripple-element { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.15); transform: scale(0); animation: ripple-animation 0.5s linear; pointer-events: none; }
         @keyframes ripple-animation { to { transform: scale(4); opacity: 0; } }
 
         .app-container { display: flex; width: 100%; height: 100%; }
-
-        /* Sidebar */
         .sidebar { width: 350px; background: var(--side); border-right: 1px solid rgba(0,0,0,0.3); display: flex; flex-direction: column; z-index: 10; }
-        .search-area { padding: 15px; }
-        .ios-input { background: var(--bg); border: 2px solid transparent; border-radius: 10px; padding: 12px; width: 100%; color: var(--text); outline: none; font-size: 15px; }
-        .ios-input:focus { border-color: var(--acc); }
+        .search-area { padding: 10px 15px; }
+        .ios-input { background: var(--bg); border: 2px solid transparent; border-radius: 12px; padding: 10px 15px; width: 100%; color: var(--text); font-size: 15px; transition: 0.2s; }
+        .ios-input:focus { border-color: var(--acc); background: #151e29; }
 
-        /* Chat List */
         .chat-list { flex: 1; overflow-y: auto; }
-        .list-item { padding: 10px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; margin: 2px 8px; border-radius: 12px; position: relative; transition: 0.2s; }
-        .list-item:hover { background: rgba(255,255,255,0.05); }
+        .list-item { padding: 10px 15px; display: flex; align-items: center; gap: 12px; cursor: pointer; margin: 2px 5px; border-radius: 12px; transition: background 0.2s; }
+        .list-item:hover { background: rgba(255,255,255,0.03); }
         .active-chat { background: var(--acc) !important; color: white !important; }
         
-        .avatar { width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; flex-shrink: 0; position: relative; background-size: cover; }
-        .online-dot { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #34c759; border: 2px solid var(--side); border-radius: 50%; }
+        .avatar { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 18px; position: relative; flex-shrink: 0; color: #fff; }
+        .online-dot { position: absolute; bottom: 2px; right: 2px; width: 11px; height: 11px; background: #34c759; border: 2px solid var(--side); border-radius: 50%; }
 
-        /* Chat Area */
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: var(--bg); background-blend-mode: overlay; }
-        .chat-header { height: 60px; background: var(--side); display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid rgba(0,0,0,0.2); cursor: pointer; }
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: var(--bg); background-blend-mode: overlay; position: relative; }
+        .chat-header { height: 60px; background: var(--side); display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid rgba(0,0,0,0.2); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         
-        .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 4px; }
-        .msg { max-width: 75%; padding: 8px 12px; border-radius: 15px; font-size: 15px; position: relative; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 6px; }
+        .msg { max-width: 75%; padding: 8px 12px; border-radius: 16px; font-size: 15px; position: relative; cursor: pointer; transition: transform 0.1s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); line-height: 1.4; }
+        .msg:active { transform: scale(0.98); }
+        .msg.sticker-msg { background: transparent !important; box-shadow: none; font-size: 50px; padding: 0; }
         .m-in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 4px; }
         .m-out { background: var(--msg-out); align-self: flex-end; border-bottom-right-radius: 4px; }
+        .edited-mark { font-size: 11px; opacity: 0.6; margin-left: 5px; font-style: italic; }
 
-        .input-bar { padding: 10px 20px; background: var(--side); display: flex; gap: 10px; align-items: flex-end; }
-        .tg-input-box { flex: 1; background: var(--bg); border-radius: 20px; padding: 10px 15px; min-height: 40px; outline: none; }
-        .send-btn { width: 45px; height: 45px; border-radius: 50%; background: var(--acc); color: white; border: none; cursor: pointer; font-size: 20px; }
+        /* Reply & Menu UI */
+        .reply-preview { display: none; background: var(--side); padding: 8px 15px; border-left: 3px solid var(--acc); border-top: 1px solid rgba(255,255,255,0.05); }
+        .reply-msg-box { border-left: 2px solid var(--acc); padding: 2px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; margin-bottom: 4px; font-size: 13px; color: var(--text-sec); display: flex; flex-direction: column; }
+        .reply-header { color: var(--acc); font-weight: bold; font-size: 12px; }
+
+        .input-bar-container { background: var(--side); display: flex; flex-direction: column; }
+        .input-bar { padding: 10px 15px; display: flex; gap: 10px; align-items: flex-end; }
+        .tg-input-box { flex: 1; background: var(--bg); border-radius: 20px; padding: 10px 15px; min-height: 42px; max-height: 150px; overflow-y: auto; color: white; border: 1px solid transparent; transition: border 0.2s; }
+        .tg-input-box:focus { border-color: rgba(36, 129, 204, 0.3); }
+        .tg-input-box:empty:before { content: attr(data-placeholder); color: var(--text-sec); }
+        
+        .icon-btn { width: 42px; height: 42px; border-radius: 50%; background: transparent; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-sec); transition: 0.2s; }
+        .icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+        .send-btn { background: var(--acc); color: white; }
+        .send-btn:hover { background: #1e6fb3; }
+
+        /* Sticker Panel */
+        .sticker-panel { display: none; height: 180px; background: var(--side); border-top: 1px solid rgba(0,0,0,0.2); padding: 10px; overflow-y: auto; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 10px; }
+        .sticker-item { font-size: 32px; cursor: pointer; text-align: center; padding: 5px; border-radius: 8px; transition: transform 0.1s; }
+        .sticker-item:hover { background: rgba(255,255,255,0.05); transform: scale(1.1); }
+
+        /* Context Menu */
+        .context-menu { display: none; position: absolute; background: var(--menu-bg); backdrop-filter: blur(10px); border-radius: 12px; width: 160px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); overflow: hidden; z-index: 100; border: 1px solid rgba(255,255,255,0.05); }
+        .ctx-item { padding: 12px 15px; cursor: pointer; font-size: 14px; display: flex; gap: 10px; align-items: center; color: white; }
+        .ctx-item:hover { background: rgba(255,255,255,0.1); }
+        .ctx-danger { color: #ff3b30; }
 
         /* Modals */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
-        .modal-card { background: var(--side); padding: 30px; border-radius: 25px; width: 350px; text-align: center; }
-        .btn { background: var(--acc); color: white; border: none; border-radius: 12px; padding: 14px; cursor: pointer; font-weight: 600; width: 100%; margin-top: 10px; }
-    </style></head><body>
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-card { background: var(--side); padding: 25px; border-radius: 24px; width: 340px; text-align: center; border: 1px solid rgba(255,255,255,0.08); }
+        .btn { background: var(--acc); color: white; border: none; border-radius: 12px; padding: 14px; cursor: pointer; width: 100%; margin-top: 12px; font-weight: 600; font-size: 16px; }
+        .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    </style></head><body onclick="closeCtx()">
 
     <div id="auth-screen" style="display: flex; height: 100vh; justify-content: center; align-items: center;">
         <div class="modal-card">
-            <h1 style="color: var(--acc);">TeleClone</h1>
+            <h1 style="color: var(--acc); margin-bottom: 5px;">TeleClone</h1>
+            <p style="opacity: 0.5; font-size: 14px;">Ultimate Edition</p>
             <input type="text" id="auth-user" placeholder="Enter @username" class="ios-input" style="margin-top:20px;">
             <button onclick="login()" class="btn ripple">Start Messaging</button>
         </div>
@@ -66,38 +88,66 @@
 
     <div id="app-screen" class="app-container" style="display:none;">
         <div class="sidebar">
-            <div style="padding:40px 20px 10px;" onclick="openMyProfile()" class="ripple">
-                <div style="display:flex; align-items:center; gap:15px; cursor:pointer;">
+            <div style="padding:30px 20px 10px;" onclick="openMyProfile()" class="ripple">
+                <div style="display:flex; align-items:center; gap:12px; cursor:pointer;">
                     <div id="my-av-ui" class="avatar"></div>
-                    <div><strong id="my-name-ui"></strong><br><small id="my-user-ui" style="color: var(--text-sec);"></small></div>
+                    <div style="flex:1; overflow:hidden;"><strong id="my-name-ui"></strong><br><small id="my-user-ui" style="color: var(--text-sec);"></small></div>
                 </div>
             </div>
-            <div class="search-area"><input type="text" id="search-inp" placeholder="Search" class="ios-input" onkeyup="if(event.key==='Enter') searchStart(this.value)"></div>
+            <div class="search-area"><input type="text" id="search-inp" placeholder="Search" class="ios-input" oninput="handleSearch(this.value)"></div>
             <div id="chat-list" class="chat-list"></div>
-            <div style="padding:20px; border-top: 1px solid rgba(0,0,0,0.2);">
-                <button id="adm-btn" onclick="openModal('modal-admin')" class="btn ripple" style="display:none; background:none; border:1px solid var(--acc); color:var(--acc);">🛠 ADMIN PANEL</button>
-                <button onclick="logout()" class="btn ripple" style="background:none; color:#ff3b30; border: 1px solid #ff3b30; margin-top:10px;">🚪 Logout</button>
+            <div style="padding:15px;">
+                <button id="adm-btn" onclick="openModal('modal-admin')" class="btn ripple" style="display:none; background:none; border:1px solid var(--acc); color:var(--acc);">🛠 Admin Panel</button>
+                <button onclick="logout()" class="btn ripple" style="background:none; color:#ff3b30; border: 1px solid #ff3b30; margin-top: 8px;">🚪 Logout</button>
             </div>
         </div>
+        
         <div class="chat-area">
-            <div class="chat-header" onclick="viewUserProfile(activeID)">
-                <div id="header-av" class="avatar" style="width:40px; height:40px; margin-right: 15px;"></div>
-                <div style="flex:1;"><strong id="header-name">Select Chat</strong><br><small id="typing-ui" style="color:var(--acc); display:none;">typing...</small></div>
+            <div class="chat-header" onclick="viewChatProfile()">
+                <div id="header-av" class="avatar" style="width:40px; height:40px; margin-right: 12px;"></div>
+                <div style="flex:1; overflow:hidden;"><strong id="header-name">Chat</strong><br><small id="header-status" style="color:var(--text-sec); font-size:12px;">offline</small><small id="typing-ui" style="color:var(--acc); font-size:12px; display:none;">typing...</small></div>
             </div>
+            
             <div id="msg-box" class="messages"></div>
-            <div class="input-bar">
-                <div id="m-text" class="tg-input-box" contenteditable="true"></div>
-                <button onclick="sendMsg()" class="send-btn ripple">⬆</button>
+            
+            <div class="input-bar-container">
+                <div id="reply-panel" class="reply-preview">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="border-left:2px solid var(--acc); padding-left:10px;">
+                            <div class="reply-header" id="reply-label">Reply to</div>
+                            <div id="reply-text" class="truncate" style="font-size:13px; max-width:250px; opacity:0.8;"></div>
+                        </div>
+                        <div onclick="cancelAction()" style="cursor:pointer; padding:5px;">✕</div>
+                    </div>
+                </div>
+                <div class="input-bar">
+                    <button onclick="toggleStickers()" class="icon-btn ripple">😊</button>
+                    <div id="m-text" class="tg-input-box" contenteditable="true" data-placeholder="Message" oninput="sendTyping()" onkeydown="handleKey(event)"></div>
+                    <button onclick="sendMsg()" class="icon-btn send-btn ripple">⬆</button>
+                </div>
+                <div id="sticker-panel" class="sticker-panel"></div>
             </div>
         </div>
     </div>
 
+    <div id="ctx-menu" class="context-menu" onclick="event.stopPropagation()">
+        <div class="ctx-item ripple" onclick="doReply()">↩ Reply</div>
+        <div id="ctx-edit" class="ctx-item ripple" onclick="doEdit()">✏️ Edit</div>
+        <div id="ctx-del" class="ctx-item ctx-danger ripple" onclick="doDelete()">🗑 Delete</div>
+    </div>
+
+    <div id="modal-profile" class="modal" onclick="closeModals()"><div class="modal-card" onclick="event.stopPropagation()">
+        <div id="prof-av" style="width:100px; height:100px; border-radius:50%; margin:0 auto 15px; font-size:35px; display:flex; align-items:center; justify-content:center;"></div>
+        <h2 id="prof-name">User</h2><p id="prof-user" style="color: var(--acc);">@user</p>
+        <div style="background: rgba(255,255,255,0.05); padding:15px; border-radius:15px; margin-top:15px; text-align:left;" id="prof-bio">Bio info here.</div>
+        <button onclick="closeModals()" class="btn ripple">Close</button>
+    </div></div>
+
     <div id="modal-admin" class="modal" onclick="closeModals()"><div class="modal-card" onclick="event.stopPropagation()">
-        <h3>Admin Controls</h3>
-        <input type="text" id="adm-target" placeholder="@username" class="ios-input" style="margin-top:15px;">
-        <button onclick="admKick()" class="btn ripple" style="background:#ff9500;">🗑 Kick Account</button>
-        <button onclick="admBanIP()" class="btn ripple" style="background:#ff3b30;">🚫 Ban IP</button>
-        <button onclick="admAddNFT()" class="btn ripple" style="background:#34c759;">💎 Grant NFT</button>
+        <h3>Admin Panel</h3>
+        <input type="text" id="adm-target" placeholder="@username" class="ios-input">
+        <button onclick="admKick()" class="btn ripple" style="background:#ff9500;">Kick User</button>
+        <button onclick="admBanIP()" class="btn ripple" style="background:#ff3b30;">Ban IP</button>
     </div></div>
 
     <script>
@@ -105,30 +155,30 @@
         let db = JSON.parse(localStorage.getItem('tele_user')) || null;
         let history = JSON.parse(localStorage.getItem('tele_history')) || [];
         let msgLog = JSON.parse(localStorage.getItem('tele_msgs')) || [];
-        let onlineUsers = {}, activeID = null;
+        let onlineUsers = {}, activeID = null, typingTimers = {};
+        
+        // State for Reply/Edit
+        let actionState = { type: null, msgId: null, msgData: null }; 
 
-        // Эффект Ripple
+        // Ripple Engine
         document.addEventListener('click', e => {
-            const target = e.target.closest('.ripple');
-            if (!target) return;
-            const rect = target.getBoundingClientRect();
-            const circle = document.createElement('span');
-            const diameter = Math.max(rect.width, rect.height);
-            circle.style.width = circle.style.height = `${diameter}px`;
-            circle.style.left = `${e.clientX - rect.left - diameter / 2}px`;
-            circle.style.top = `${e.clientY - rect.top - diameter / 2}px`;
-            circle.classList.add('ripple-element');
-            target.appendChild(circle);
-            setTimeout(() => circle.remove(), 600);
+            const t = e.target.closest('.ripple'); if (!t) return;
+            const r = t.getBoundingClientRect();
+            const c = document.createElement('span');
+            const d = Math.max(r.width, r.height);
+            c.style.width = c.style.height = `${d}px`;
+            c.style.left = `${e.clientX - r.left - d/2}px`;
+            c.style.top = `${e.clientY - r.top - d/2}px`;
+            c.classList.add('ripple-element');
+            t.appendChild(c); setTimeout(() => c.remove(), 600);
         });
 
-        window.onload = () => { if(db) startApp(); };
+        window.onload = () => { initStickers(); if(db) startApp(); };
 
         function login() {
-            const u = document.getElementById('auth-user').value.trim();
-            if(!u) return;
-            const nick = u.startsWith('@') ? u.toLowerCase() : '@'+u.toLowerCase();
-            db = {username:nick, name:nick.replace('@',''), isAdmin:nick==='@paramov', nfts:[], pColor:'#2481cc'};
+            const u = document.getElementById('auth-user').value.trim(); if(!u) return;
+            const n = u.startsWith('@') ? u.toLowerCase() : '@'+u.toLowerCase();
+            db = {username:n, name:n.replace('@',''), isAdmin:n==='@paramov', bio:"I use TeleClone Ultimate."};
             localStorage.setItem('tele_user', JSON.stringify(db)); startApp();
         }
 
@@ -136,21 +186,33 @@
             document.getElementById('auth-screen').style.display='none';
             document.getElementById('app-screen').style.display='flex';
             if(db.isAdmin) document.getElementById('adm-btn').style.display='block';
-            socket.emit('online', db.username);
-            socket.emit('update_profile_broadcast', db);
-            updateUI(); renderList();
+            socket.emit('online', db.username); updateUI(); renderList();
         }
 
-        function searchStart(v) {
-            const t = v.startsWith('@') ? v.toLowerCase() : '@'+v.toLowerCase();
-            if(!history.find(h => h.username === t)) history.push({ username: t, name: t.replace('@',''), nfts: [] });
-            openChat(t); renderList();
+        function handleSearch(v) { renderList(v.toLowerCase()); }
+
+        function renderList(q = "") {
+            const c = document.getElementById('chat-list');
+            let f = history.filter(h => h.username !== db.username);
+            if(q) f = f.filter(h => h.name.toLowerCase().includes(q) || h.username.toLowerCase().includes(q));
+            c.innerHTML = f.map(h => `
+                <div class="list-item ripple ${activeID === h.username ? 'active-chat' : ''}" onclick="openChat('${h.username}')">
+                    <div class="avatar" style="background: ${getGradient(h.username)}">${h.name[0]}
+                        <div class="online-dot" style="display: ${onlineUsers[h.username] ? 'block' : 'none'}"></div>
+                    </div>
+                    <div style="flex:1; overflow:hidden;">
+                        <div style="display:flex; justify-content:space-between;"><b>${h.name}</b></div>
+                        <div class="truncate" style="font-size:13px; opacity:0.6;">Ultimade Code</div>
+                    </div>
+                </div>
+            `).join('');
         }
 
         function openChat(id) {
-            activeID = id;
+            activeID = id; cancelAction();
             const u = history.find(h => h.username === id) || {name: id};
             document.getElementById('header-name').innerText = u.name;
+            document.getElementById('header-status').innerText = onlineUsers[id] ? 'online' : 'offline';
             const hav = document.getElementById('header-av');
             hav.style.background = getGradient(id); hav.innerText = u.name[0];
             document.getElementById('msg-box').innerHTML = '';
@@ -159,57 +221,168 @@
             renderList();
         }
 
-        function sendMsg() {
-            const txt = document.getElementById('m-text').innerText.trim();
+        // --- Core Messaging Logic ---
+        function sendMsg(stickerContent = null) {
+            const inp = document.getElementById('m-text');
+            const txt = stickerContent || inp.innerText.trim();
+            
+            // Mode: Editing
+            if (actionState.type === 'edit') {
+                if(!txt) return;
+                const msg = msgLog.find(m => m.id === actionState.msgId);
+                if(msg) {
+                    msg.text = txt; msg.edited = true;
+                    socket.emit('edit_msg', { id: msg.id, text: txt, to: activeID });
+                    save(); 
+                    // Update DOM locally
+                    const el = document.getElementById(`msg-${msg.id}`);
+                    if(el) el.querySelector('.msg-content').innerText = txt;
+                    if(el && !el.querySelector('.edited-mark')) {
+                        el.querySelector('.msg-content').innerHTML += '<span class="edited-mark">(edited)</span>';
+                    }
+                }
+                cancelAction(); inp.innerText = ''; return;
+            }
+
+            // Mode: Sending New
             if(!txt || !activeID) return;
-            const d = {to:activeID, from:db.username, text:txt, time:Date.now()};
+            const d = {
+                id: Date.now() + Math.random().toString(16).slice(2),
+                to: activeID, from: db.username, text: txt, time: Date.now(),
+                reply: actionState.type === 'reply' ? actionState.msgData : null,
+                isSticker: !!stickerContent
+            };
             socket.emit('private_msg', d); msgLog.push(d); save(); appendMsg(d);
-            document.getElementById('m-text').innerText = '';
+            if(!stickerContent) inp.innerText = ''; 
+            cancelAction();
+            document.getElementById('sticker-panel').style.display = 'none';
         }
 
         function appendMsg(m) {
             const div = document.createElement('div');
-            div.className = `msg ${m.from === db.username ? 'm-out' : 'm-in'}`;
-            div.innerText = m.text;
+            div.id = `msg-${m.id}`;
+            div.className = `msg ${m.from === db.username ? 'm-out' : 'm-in'} ${m.isSticker ? 'sticker-msg' : ''}`;
+            div.onclick = (e) => openCtx(e, m);
+            
+            let content = `<span class="msg-content">${m.text}${m.edited ? '<span class="edited-mark">(edited)</span>' : ''}</span>`;
+            if(m.isSticker) content = `<div style="font-size:40px">${m.text}</div>`;
+
+            let replyHtml = m.reply ? `<div class="reply-msg-box"><div class="reply-header">${m.reply.from}</div><div class="truncate">${m.reply.text}</div></div>` : '';
+            
+            div.innerHTML = `${replyHtml}${content}`;
             const box = document.getElementById('msg-box');
             box.appendChild(div); box.scrollTop = box.scrollHeight;
         }
 
-        socket.on('receive_msg', d => {
-            msgLog.push(d); save();
-            if(activeID === d.from) appendMsg(d);
-            renderList();
+        // --- Context Menu & Actions ---
+        function openCtx(e, m) {
+            e.stopPropagation();
+            actionState.msgData = m; actionState.msgId = m.id;
+            const menu = document.getElementById('ctx-menu');
+            const isMine = m.from === db.username;
+            
+            document.getElementById('ctx-edit').style.display = isMine && !m.isSticker ? 'flex' : 'none';
+            document.getElementById('ctx-del').style.display = isMine ? 'flex' : 'none';
+
+            // Position calculation
+            let x = e.clientX, y = e.clientY;
+            if(x + 160 > window.innerWidth) x -= 160;
+            if(y + 120 > window.innerHeight) y -= 120;
+            
+            menu.style.left = `${x}px`; menu.style.top = `${y}px`;
+            menu.style.display = 'block';
+        }
+        function closeCtx() { document.getElementById('ctx-menu').style.display = 'none'; }
+
+        function doReply() {
+            actionState.type = 'reply';
+            document.getElementById('reply-label').innerText = `Reply to ${actionState.msgData.from}`;
+            document.getElementById('reply-text').innerText = actionState.msgData.text;
+            document.getElementById('reply-panel').style.display = 'flex';
+            document.getElementById('m-text').focus(); closeCtx();
+        }
+        function doEdit() {
+            actionState.type = 'edit';
+            document.getElementById('reply-label').innerText = `Editing Message`;
+            document.getElementById('reply-text').innerText = actionState.msgData.text;
+            document.getElementById('reply-panel').style.display = 'flex';
+            document.getElementById('m-text').innerText = actionState.msgData.text;
+            closeCtx();
+        }
+        function doDelete() {
+            if(!confirm('Delete this message?')) return;
+            const idx = msgLog.findIndex(m => m.id === actionState.msgId);
+            if(idx > -1) {
+                msgLog.splice(idx, 1); save();
+                document.getElementById(`msg-${actionState.msgId}`).remove();
+                socket.emit('delete_msg', { id: actionState.msgId, to: activeID });
+            }
+            closeCtx();
+        }
+        function cancelAction() {
+            actionState = { type: null, msgId: null, msgData: null };
+            document.getElementById('reply-panel').style.display = 'none';
+            document.getElementById('m-text').innerText = '';
+        }
+
+        // --- Stickers ---
+        function toggleStickers() {
+            const p = document.getElementById('sticker-panel');
+            p.style.display = p.style.display === 'grid' ? 'none' : 'grid';
+        }
+        function initStickers() {
+            const packs = ['😀','😂','😍','😎','😭','😡','👍','👎','🎉','🔥','❤️','💩','👻','👽','🤖','🎃'];
+            const p = document.getElementById('sticker-panel');
+            p.innerHTML = packs.map(s => `<div class="sticker-item" onclick="sendMsg('${s}')">${s}</div>`).join('');
+        }
+
+        // --- Sockets ---
+        socket.on('receive_msg', d => { msgLog.push(d); save(); if(activeID === d.from) appendMsg(d); renderList(); });
+        socket.on('msg_edited', d => {
+            const m = msgLog.find(x => x.id === d.id);
+            if(m) { m.text = d.text; m.edited = true; save(); }
+            if(activeID === msgLog.find(x=>x.id===d.id)?.from || activeID === d.to) {
+                const el = document.getElementById(`msg-${d.id}`);
+                if(el) {
+                    el.querySelector('.msg-content').innerHTML = `${d.text}<span class="edited-mark">(edited)</span>`;
+                }
+            }
+        });
+        socket.on('msg_deleted', d => {
+            msgLog = msgLog.filter(m => m.id !== d.id); save();
+            const el = document.getElementById(`msg-${d.id}`); if(el) el.remove();
         });
 
+        // --- Helpers ---
+        function handleKey(e) { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
+        function sendTyping() { if(activeID) socket.emit('typing', { from: db.username, to: activeID }); }
+        socket.on('user_typing', d => {
+            if(activeID === d.from) {
+                document.getElementById('typing-ui').style.display = 'inline';
+                document.getElementById('header-status').style.display = 'none';
+                clearTimeout(typingTimers[d.from]);
+                typingTimers[d.from] = setTimeout(() => {
+                    document.getElementById('typing-ui').style.display = 'none';
+                    document.getElementById('header-status').style.display = 'inline';
+                }, 2000);
+            }
+        });
         function getGradient(id) {
-            const colors = [['#ff512f', '#dd2476'], ['#4facfe', '#00f2fe'], ['#667eea', '#764ba2']];
-            const idx = Math.abs(id.split('').reduce((a,b)=>a+b.charCodeAt(0),0)) % colors.length;
-            return `linear-gradient(45deg, ${colors[idx][0]}, ${colors[idx][1]})`;
+            const c = [['#ff512f', '#dd2476'], ['#4facfe', '#00f2fe'], ['#667eea', '#764ba2'], ['#f093fb', '#f5576c']];
+            const i = Math.abs(id.split('').reduce((a,b)=>a+b.charCodeAt(0),0)) % c.length;
+            return `linear-gradient(45deg, ${c[i][0]}, ${c[i][1]})`;
         }
-
-        function renderList() {
-            document.getElementById('chat-list').innerHTML = history.filter(h => h.username !== db.username).map(h => `
-                <div class="list-item ripple ${activeID === h.username ? 'active-chat' : ''}" onclick="openChat('${h.username}')">
-                    <div class="avatar" style="background: ${getGradient(h.username)}">${h.name[0]}</div>
-                    <div style="flex:1"><b>${h.name}</b><br><small style="opacity:0.6">This is the best code.</small></div>
-                </div>
-            `).join('');
-        }
-
         function updateUI() {
             document.getElementById('my-name-ui').innerText = db.name;
             document.getElementById('my-user-ui').innerText = db.username;
             document.getElementById('my-av-ui').style.background = getGradient(db.username);
             document.getElementById('my-av-ui').innerText = db.name[0];
         }
-
-        function admKick() { socket.emit('adm_kick_request', document.getElementById('adm-target').value); closeModals(); }
-        function admBanIP() { socket.emit('adm_ban_ip', document.getElementById('adm-target').value); closeModals(); }
-        function save() { 
-            localStorage.setItem('tele_history', JSON.stringify(history)); 
-            localStorage.setItem('tele_msgs', JSON.stringify(msgLog)); 
-        }
+        function save() { localStorage.setItem('tele_history', JSON.stringify(history)); localStorage.setItem('tele_msgs', JSON.stringify(msgLog)); }
         function openModal(id) { document.getElementById(id).style.display='flex'; }
         function closeModals() { document.querySelectorAll('.modal').forEach(m=>m.style.display='none'); }
         function logout() { localStorage.clear(); location.reload(); }
+        
+        socket.on('kick_signal', (t) => { if(db.username === t) logout(); });
+        socket.on('user_status', (d) => { onlineUsers[d.username] = d.status==='online'; if(activeID === d.username) document.getElementById('header-status').innerText = d.status; renderList(); });
     </script></body></html>
