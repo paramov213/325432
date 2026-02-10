@@ -1,74 +1,44 @@
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
-
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-    cors: { origin: "*" }
-});
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
+const fs = require('fs');
 
-// Раздача файлов
-app.use(express.static(__dirname));
+// Файлы "базы данных"
+const USERS_FILE = './users.json';
+const MSGS_FILE = './messages.json';
 
-// Хранилище онлайн-статусов
-const onlineUsers = new Map();
+// Загрузка данных при старте
+let users = fs.existsSync(USERS_FILE) ? JSON.parse(fs.readFileSync(USERS_FILE)) : [];
+let messages = fs.existsSync(MSGS_FILE) ? JSON.parse(fs.readFileSync(MSGS_FILE)) : [];
 
 io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
+    // Синхронизация данных при входе
+    socket.on('request_sync', (username) => {
+        socket.emit('sync_data', {
+            history: users,
+            messages: messages.filter(m => m.from === username || m.to === username)
+        });
+    });
 
-    // Когда юзер заходит в сеть
-    socket.on('online', (username) => {
-        if (!username) return;
-        socket.username = username;
-        onlineUsers.set(username, socket.id);
+    // Регистрация/Обновление профиля
+    socket.on('update_profile_broadcast', (userData) => {
+        const idx = users.findIndex(u => u.username === userData.username);
+        if (idx !== -1) users[idx] = userData;
+        else users.push(userData);
         
-        // Оповещаем всех, что юзер в сети
-        io.emit('user_status', { username: username, status: 'online' });
+        fs.writeFileSync(USERS_FILE, JSON.stringify(users));
+        io.emit('user_profile_updated', userData);
     });
 
     // Личные сообщения
     socket.on('private_msg', (data) => {
-        const targetSocketId = onlineUsers.get(data.to);
-        if (targetSocketId) {
-            // Отправляем конкретному получателю
-            io.to(targetSocketId).emit('receive_msg', data);
-        }
-        // Если это системный бот, сервер может логировать или обрабатывать это тут
+        messages.push(data);
+        fs.writeFileSync(MSGS_FILE, JSON.stringify(messages));
+        socket.broadcast.emit('receive_msg', data);
     });
 
-    // Индикатор печати
-    socket.on('typing', (data) => {
-        const targetSocketId = onlineUsers.get(data.to);
-        if (targetSocketId) {
-            io.to(targetSocketId).emit('display_typing', { from: data.from });
-        }
-    });
-
-    // Обновление профиля (рассылка всем)
-    socket.on('update_profile_broadcast', (userData) => {
-        // Рассылаем обновленные данные всем клиентам, чтобы у них обновилась история
-        socket.broadcast.emit('user_profile_updated', userData);
-    });
-
-    // Отключение
-    socket.on('disconnect', () => {
-        if (socket.username) {
-            onlineUsers.delete(socket.username);
-            io.emit('user_status', { username: socket.username, status: 'offline' });
-            console.log(`User ${socket.username} disconnected`);
-        }
-    });
+    socket.on('typing', (data) => socket.broadcast.emit('display_typing', data));
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`
-    ======================================
-    🚀 Broke Pro Max Server Started!
-    📍 Port: ${PORT}
-    🛠 Status: Working Perfectly
-    ======================================
-    `);
-});
+http.listen(3000, () => console.log('Сервер запущен на порту 3000'));
