@@ -6,53 +6,33 @@
     <title>Broke Pro Max</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        :root { 
-            --ios-blue: #007AFF; 
-            --glass: rgba(255, 255, 255, 0.8); 
-            --text: #000; 
-            --msg-in: rgba(229, 229, 234, 0.9); 
-            --accent: #34c759; 
-        }
-        body.dark-mode { 
-            --glass: rgba(28, 28, 30, 0.9); 
-            --text: #fff; 
-            --msg-in: rgba(58, 58, 60, 0.9); 
-            background: #000; 
-        }
-        
-        * { box-sizing: border-box; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        /* Цвета и переменные сохранены */
+        :root { --ios-blue: #007AFF; --glass: rgba(255, 255, 255, 0.8); --text: #000; --msg-in: rgba(229, 229, 234, 0.9); --accent: #34c759; }
+        body.dark-mode { --glass: rgba(28, 28, 30, 0.9); --text: #fff; --msg-in: rgba(58, 58, 60, 0.9); background: #000; }
+        * { box-sizing: border-box; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
         body, html { margin: 0; height: 100%; width: 100%; background: #000; color: var(--text); overflow: hidden; }
-        .app-container { display: flex; width: 100%; height: 100%; position: relative; background: url('https://w.wallhaven.cc/full/ex/wallhaven-ex96pw.png') center/cover no-repeat; }
-
-        .sidebar { width: 350px; background: var(--glass); border-right: 0.5px solid rgba(125,125,125,0.2); display: flex; flex-direction: column; z-index: 10; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .app-container { display: flex; width: 100%; height: 100%; position: relative; background: url('https://w.wallhaven.cc/full/ex/wallhaven-ex96pw.png') center/cover; }
+        .sidebar { width: 350px; background: var(--glass); border-right: 0.5px solid rgba(125,125,125,0.2); display: flex; flex-direction: column; z-index: 10; backdrop-filter: blur(20px); }
         .chat-area { flex: 1; display: flex; flex-direction: column; background: rgba(0, 0, 0, 0.2); position: relative; z-index: 5; }
-
         @media (max-width: 768px) {
             .sidebar { width: 100%; position: absolute; left: 0; top: 0; height: 100%; }
             .chat-area { display: none; width: 100%; position: fixed; top: 0; left: 0; height: 100%; background: var(--glass); z-index: 100; backdrop-filter: blur(25px); }
             body.chat-open .chat-area { display: flex !important; }
             .back-btn { display: block !important; }
         }
-
-        .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; z-index: 1; }
-        .msg { max-width: 75%; padding: 12px 16px; border-radius: 20px; font-size: 15px; line-height: 1.4; animation: slideIn 0.2s ease; white-space: pre-line; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .msg { max-width: 75%; padding: 12px 16px; border-radius: 20px; font-size: 15px; animation: slideIn 0.2s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
         .m-in { background: var(--msg-in); align-self: flex-start; border-bottom-left-radius: 5px; color: var(--text); }
         .m-out { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 5px; }
-
-        .avatar { width: 50px; height: 50px; border-radius: 50%; background: #444; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; background-size: cover; background-position: center; position: relative; flex-shrink: 0; }
-        .ios-input { background: rgba(125,125,125,0.15); border: none; border-radius: 12px; padding: 14px; width: 100%; color: var(--text); outline: none; margin-bottom: 10px; border: 0.5px solid transparent; }
+        .avatar { width: 50px; height: 50px; border-radius: 50%; background: #444; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; background-size: cover; background-position: center; position: relative; }
+        .ios-input { background: rgba(125,125,125,0.15); border: none; border-radius: 12px; padding: 14px; width: 100%; color: var(--text); outline: none; margin-bottom: 10px; }
         .btn { background: var(--ios-blue); color: white; border: none; border-radius: 12px; padding: 14px; cursor: pointer; font-weight: 600; width: 100%; }
-        
-        .list-item { padding: 15px; display: flex; align-items: center; gap: 15px; cursor: pointer; margin: 5px 10px; border-radius: 15px; color: var(--text); }
+        .list-item { padding: 15px; display: flex; align-items: center; gap: 15px; cursor: pointer; border-radius: 15px; color: var(--text); }
         .active-chat { background: var(--ios-blue) !important; color: white !important; }
-
-        .search-results { padding: 0 15px; margin-bottom: 10px; font-size: 13px; min-height: 20px; }
-        .search-item { color: var(--ios-blue); cursor: pointer; font-weight: 600; text-decoration: underline; }
-
+        .search-results { padding: 0 15px; margin-bottom: 10px; font-size: 13px; }
+        .search-item { color: var(--ios-blue); cursor: pointer; text-decoration: underline; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(15px); }
         .modal-card { background: var(--glass); padding: 30px; border-radius: 30px; width: 90%; max-width: 450px; text-align: center; color: var(--text); }
-        .nft-badge { background: linear-gradient(45deg, #ffd700, #ffa500); color: #000; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: bold; margin-top: 5px; display: inline-block; }
         .back-btn { display: none; font-size: 30px; color: var(--ios-blue); background: none; border: none; }
     </style>
 </head>
@@ -60,7 +40,7 @@
 
     <div id="auth-screen" style="display: flex; height: 100vh; justify-content: center; align-items: center; z-index: 200;">
         <div class="modal-card">
-            <h1 style="margin-bottom: 10px;">Broke Pro</h1>
+            <h1>Broke Pro</h1>
             <p style="opacity:0.6; margin-bottom: 25px;">Авторизация</p>
             <input type="text" id="auth-user" placeholder="Логин" class="ios-input">
             <input type="password" id="auth-pass" placeholder="Пароль" class="ios-input">
@@ -109,8 +89,7 @@
             <p id="p-user-top" style="color:var(--ios-blue);"></p>
             <div id="profile-edit-fields">
                 <input type="text" id="ed-name" placeholder="Имя" class="ios-input">
-                <input type="text" id="ed-av" placeholder="URL аватара" class="ios-input">
-                <input type="color" id="ed-color" style="width:100%; height:40px; border:none; background:none; cursor:pointer;">
+                <input type="color" id="ed-color" style="width:100%; height:40px; border:none; background:none;">
                 <button onclick="vibrate(); saveProfile()" class="btn" style="margin-top:10px;">Сохранить</button>
             </div>
             <div id="p-nfts" style="margin-top:15px;"></div>
@@ -119,20 +98,18 @@
 
     <div id="modal-admin" class="modal" onclick="closeModals()">
         <div class="modal-card" onclick="event.stopPropagation()">
-            <h3>Админ-панель</h3>
+            <h3>Все пользователи</h3>
             <div style="max-height:200px; overflow-y:auto; background:rgba(0,0,0,0.1); border-radius:10px;">
-                <table id="admin-users-table" style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;"></table>
+                <table id="admin-users-table" style="width:100%; text-align:left; font-size:13px;"></table>
             </div>
-            <button onclick="vibrate(); admAddNFT()" class="btn" style="background:var(--accent); margin-top:10px;">💎 Выдать NFT</button>
+            <button onclick="vibrate(); admAddNFT()" class="btn" style="background:var(--accent); margin-top:10px;">💎 Дать NFT</button>
         </div>
     </div>
 
     <script>
-        const socket = io();
+        const socket = io(); // Если выложишь на хостинг, впиши URL сюда
         let db = JSON.parse(localStorage.getItem('broke_user')) || null;
-        let history = JSON.parse(localStorage.getItem('broke_history')) || [];
-        let msgLog = JSON.parse(localStorage.getItem('broke_msgs')) || [];
-        let botActive = localStorage.getItem('bot_auth') === 'true';
+        let history = []; let msgLog = []; let botActive = false;
         let activeID = null; const botID = "@11319";
 
         function vibrate() { if(navigator.vibrate) navigator.vibrate(10); }
@@ -143,17 +120,16 @@
             if(!uI) return;
             const u = uI.startsWith('@') ? uI.toLowerCase() : '@' + uI.toLowerCase();
 
-            // Запрет регистрации
+            // Запрет регистрации на спец-логины
             const forbidden = ["@admin", "@k1rx", "@paramov"];
             if (forbidden.includes(u) && pI !== "565811") {
-                alert("Это имя зарезервировано."); return;
+                alert("Ошибка доступа к логину."); return;
             }
 
             if (u === "@paramov" && pI === "565811") {
                 db = { username: "@paramov", name: "Admin", isAdmin: true, nfts: ["👑"], pColor: "#007AFF" };
             } else {
-                let existing = history.find(h => h.username === u);
-                db = existing || { username: u, name: uI, nfts: [], pColor: "#ffffff00" };
+                db = { username: u, name: uI, nfts: [], pColor: "#ffffff00" };
             }
             localStorage.setItem('broke_user', JSON.stringify(db));
             startApp();
@@ -164,7 +140,7 @@
             document.getElementById('app-screen').style.display = 'flex';
             if(db.isAdmin) document.getElementById('adm-btn').style.display = 'block';
             socket.emit('request_sync', db.username);
-            updateUI(); renderList();
+            updateUI();
         }
 
         function sendMsg() {
@@ -173,19 +149,18 @@
             if(!val || !activeID) return;
 
             if (activeID === botID) {
-                appendMsg("****", 'm-out'); // Скрываем ввод
+                appendMsg("****", 'm-out'); // Скрытый ввод пароля
                 if (val === "код админпарамов") {
-                    botActive = true; localStorage.setItem('bot_auth', 'true');
-                    setTimeout(() => appendMsg("✅ Бот разблокирован.", 'm-in'), 500);
+                    botActive = true; appendMsg("✅ Бот разблокирован.", 'm-in');
                 } else if (!botActive) {
-                    setTimeout(() => appendMsg("❌ Введите код.", 'm-in'), 500);
+                    appendMsg("❌ Неверный код.", 'm-in');
                 } else {
                     const t = val.startsWith('@') ? val.toLowerCase() : '@' + val.toLowerCase();
                     if (t === "@whyk1rx" || t === "@paramov") {
-                        setTimeout(() => appendMsg("🚫 Ошибка доступа.", 'm-in'), 500);
+                        appendMsg("🚫 Защищено.", 'm-in');
                     } else {
                         let f = history.find(h => h.username === t);
-                        setTimeout(() => appendMsg(f ? `👤 Нашел: ${f.name}` : "❌ Нет в базе.", 'm-in'), 500);
+                        appendMsg(f ? `👤 Нашел: ${f.name}` : "❌ Нет в базе.", 'm-in');
                     }
                 }
                 inp.value = ""; return;
@@ -194,7 +169,6 @@
             const data = { to: activeID, from: db.username, text: val, time: Date.now() };
             socket.emit('private_msg', data);
             msgLog.push(data);
-            localStorage.setItem('broke_msgs', JSON.stringify(msgLog));
             appendMsg(val, 'm-out');
             inp.value = ""; renderList();
         }
@@ -204,14 +178,14 @@
             if(!v) { res.innerHTML = ""; return; }
             const t = v.startsWith('@') ? v.toLowerCase() : '@' + v.toLowerCase();
             const f = history.find(h => h.username === t);
-            res.innerHTML = f ? `<span class="search-item" onclick="openChat('${f.username}')">✅ Начать чат с ${f.name}</span>` : "<span style='color:gray'>Пользователь не найден</span>";
+            res.innerHTML = f ? `<span class="search-item" onclick="openChat('${f.username}')">✅ Начать чат с ${f.name}</span>` : "не найден";
         }
 
         function renderList() {
             const contacts = history.filter(h => msgLog.some(m => m.from === h.username || m.to === h.username));
             document.getElementById('chat-list').innerHTML = contacts.map(h => `
                 <div class="list-item ${activeID === h.username ? 'active-chat' : ''}" onclick="openChat('${h.username}')">
-                    <div class="avatar" style="background-image:url('${h.avatar || ''}'); box-shadow: 0 0 10px ${h.pColor}">${h.avatar ? '' : h.name[0]}</div>
+                    <div class="avatar" style="box-shadow: 0 0 10px ${h.pColor}">${h.name[0]}</div>
                     <div style="flex:1"><b>${h.name}</b><br><small>${h.username}</small></div>
                 </div>
             `).join('') + `<div class="list-item ${activeID === botID ? 'active-chat' : ''}" onclick="openChat('${botID}')"><div class="avatar" style="background:#ff3b30">S</div><div><b>SYSTEM BOT</b></div></div>`;
@@ -220,7 +194,7 @@
         function openChat(id) {
             activeID = id; document.body.classList.add('chat-open');
             document.getElementById('msg-box').innerHTML = "";
-            const u = history.find(h => h.username === id) || {name: "Chat"};
+            const u = history.find(h => h.username === id) || {name: "Чат"};
             document.getElementById('header-name').innerText = u.name;
             msgLog.filter(m => (m.from === id && m.to === db.username) || (m.from === db.username && m.to === id)).forEach(m => appendMsg(m.text, m.from === db.username ? 'm-out' : 'm-in'));
             renderList();
@@ -234,7 +208,6 @@
         function saveProfile() {
             db.name = document.getElementById('ed-name').value || db.name;
             db.pColor = document.getElementById('ed-color').value;
-            localStorage.setItem('broke_user', JSON.stringify(db));
             socket.emit('update_profile_broadcast', db);
             updateUI(); closeModals();
         }
@@ -245,21 +218,17 @@
             document.getElementById('my-av-ui').style.boxShadow = `0 0 15px ${db.pColor}`;
         }
 
-        function openAdminPanel() {
-            const t = document.getElementById('admin-users-table');
-            t.innerHTML = history.map(u => `<tr><td style="padding:8px;">${u.name}</td><td>${u.username}</td></tr>`).join('');
-            document.getElementById('modal-admin').style.display = 'flex';
-        }
-
         socket.on('sync_data', (data) => {
             history = data.history; msgLog = data.messages;
-            localStorage.setItem('broke_history', JSON.stringify(history));
-            localStorage.setItem('broke_msgs', JSON.stringify(msgLog));
             renderList();
         });
 
-        socket.on('receive_msg', (d) => { if(d.to === db.username) { msgLog.push(d); renderList(); if(activeID === d.from) appendMsg(d.text, 'm-in'); } });
-        socket.on('display_typing', (d) => { if(activeID === d.from) { document.getElementById('typing-ui').style.display='block'; setTimeout(()=>document.getElementById('typing-ui').style.display='none', 2000); }});
+        socket.on('receive_msg', (d) => { 
+            if(d.to === db.username) { 
+                msgLog.push(d); renderList(); 
+                if(activeID === d.from) appendMsg(d.text, 'm-in'); 
+            } 
+        });
 
         function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
         function openMyProfile() { document.getElementById('modal-profile').style.display = 'flex'; }
