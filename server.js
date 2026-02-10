@@ -3,14 +3,24 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const fs = require('fs');
+const path = require('path'); // Добавь это
 
 const USERS_FILE = './users.json';
 const MSGS_FILE = './messages.json';
+
+// --- ВОТ ЭТОТ БЛОК ИСПРАВЛЯЕТ ОШИБКУ "Cannot GET /" ---
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+// -----------------------------------------------------
 
 let users = fs.existsSync(USERS_FILE) ? JSON.parse(fs.readFileSync(USERS_FILE)) : [];
 let messages = fs.existsSync(MSGS_FILE) ? JSON.parse(fs.readFileSync(MSGS_FILE)) : [];
 
 io.on('connection', (socket) => {
+    // Вся твоя остальная логика (request_sync, private_msg и т.д.)
+    // Оставляй её без изменений, как в предыдущем коде
+    
     socket.on('request_sync', (username) => {
         socket.emit('sync_data', { history: users, messages: messages.filter(m => m.from === username || m.to === username) });
     });
@@ -43,4 +53,7 @@ io.on('connection', (socket) => {
     socket.on('typing', (d) => socket.broadcast.emit('display_typing', d));
 });
 
-http.listen(3000, () => console.log('Server OK'));
+// Используй порт 3000 (или тот, который тебе нужен)
+http.listen(3000, '0.0.0.0', () => {
+    console.log('Сервер запущен на порту 3000');
+});
